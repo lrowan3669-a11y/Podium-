@@ -80,6 +80,17 @@ Sound cues are synthesized with the Web Audio API (no audio files needed)
 per class: engine rev (Hamilton), crowd roar (Charlton), bell (Fury /
 Sweet Science), dartboard thud (The Power) — see `public/js/sound.js`.
 
+### Graffiti styling
+
+Three street-art webfonts are self-hosted under `public/fonts/`
+(Bungee for headers/nav/buttons, Rubik Wet Paint for the dripping wordmark,
+Permanent Marker for tag-style flourishes) rather than pulled from the
+Google Fonts CDN, so the app still looks right behind school content
+filters that commonly block external font CDNs. Paint-drip underlines,
+spray-splatter rank badges, torn-sticker card corners, and corner
+paint-cloud textures are all done in pure CSS (`public/css/style.css`) —
+no extra image assets required.
+
 ## Deployment
 
 ### Vercel
