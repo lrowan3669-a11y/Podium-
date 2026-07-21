@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Podium</title>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- Autoplay-policy gate: must be tapped before any Web Audio sound will play -->
+<div id="gate" class="gate">
+  <div class="gate-inner">
+    <div class="gate-mark" id="gate-mark"></div>
+    <h1 class="gate-wordmark">PODIUM</h1>
+    <p class="gate-sub">Classroom Championship</p>
+    <button id="gate-enter" class="btn btn-primary btn-huge">Enter Podium</button>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <a href="#/individual" class="brand">
+      <span id="header-mark" class="header-mark"></span>
+      <span class="brand-word">PODIUM</span>
+    </a>
+    <nav class="nav">
+      <a href="#/individual" data-route="individual">Individual</a>
+      <a href="#/classes" data-route="classes">Constructors</a>
+      <a href="#/weekly" data-route="weekly">Weekly</a>
+      <a href="#/play" data-route="play">Question Mode</a>
+      <a href="#/tv" data-route="tv">TV Mode</a>
+      <a href="#/admin" data-route="admin">Teacher Admin</a>
+    </nav>
+    <div class="week-pill" id="week-pill">Week —</div>
+  </header>
+
+  <main id="screen" class="screen"></main>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
