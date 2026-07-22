@@ -250,19 +250,37 @@ step needed for that part.
 ## Deploying to Vercel
 
 `vercel.json` routes all requests through `server.js` as a single
-serverless function. Since persistence is now Supabase (a real hosted
-Postgres database reachable over HTTPS), there's no serverless
-filesystem caveat to work around — this is the straightforward,
-correct setup for Vercel.
+serverless function (`includeFiles: ["public/**"]` makes sure the static
+frontend ships with it — without that, Vercel's function bundler can't
+tell that `express.static('public')` needs the whole folder). Since
+persistence is Supabase (a real hosted Postgres database reachable over
+HTTPS), there's no serverless-filesystem caveat to work around.
 
-1. Import the repo into Vercel as a new project.
-2. In the Vercel project's **Settings → Environment Variables**, add the
-   same two variables from your `.env`: `SUPABASE_URL` and
-   `SUPABASE_SERVICE_ROLE_KEY`.
-3. Deploy. Local dev and the Vercel deployment point at the same
+1. **Import the repo into Vercel**: New Project → import
+   `lrowan3669-a11y/Podium-` from GitHub.
+2. **Set the production branch.** The app currently lives on
+   `claude/app-build-brief-hyvhig`, not `main`. Either:
+   - Project **Settings → Git → Production Branch**, set it to
+     `claude/app-build-brief-hyvhig`, or
+   - merge that branch into `main` first and deploy from there (the
+     usual long-term setup).
+
+   Whichever branch is set as Production is the one that deploys to your
+   main `*.vercel.app` URL on every push — that's what "update bit by
+   bit through there" gets you: push a commit, Vercel redeploys
+   automatically, no manual redeploy step.
+3. **Add environment variables**: Project **Settings → Environment
+   Variables** → add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (same
+   values as your local `.env`) for the **Production** environment (and
+   Preview, if you want preview deployments to also work against real
+   data).
+4. **Deploy.** Local dev and the Vercel deployment point at the same
    Supabase project by default, so data created from one shows up in the
-   other — that's normal and usually what you want for a single
-   classroom's data.
+   other — normal and usually what you want for a single school's data.
+5. **Sanity check after first deploy**: open the deployed URL, sign up,
+   and confirm the frontend actually loads (styles, fonts, the gate
+   screen) rather than a blank page — that's the tell if `includeFiles`
+   ever needs adjusting for a future restructure.
 
 ## Validation
 

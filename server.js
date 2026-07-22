@@ -384,9 +384,13 @@ app.use((req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Runs on every cold start, not just `node server.js` directly — Vercel
+// imports this module as a serverless handler and never hits the
+// require.main branch below, so this can't be gated behind it.
+ensureAvatarBucket().catch((err) => console.warn('avatar bucket check failed:', err.message));
+
 const PORT = process.env.PORT || 3000;
 if (require.main === module) {
-  ensureAvatarBucket().catch((err) => console.warn('avatar bucket check failed:', err.message));
   app.listen(PORT, () => console.log(`Podium server running on http://localhost:${PORT}`));
 }
 
