@@ -1,6 +1,4 @@
 node_modules/
-db/podium.db
-db/podium.db-shm
-db/podium.db-wal
+.env
 .vercel
 *.log

@@ -6,14 +6,15 @@ built teacher-driven for a classroom TV, per `PODIUM_BRIEF.md`.
 
 ## Quick start
 
+Persistence is a hosted Supabase (Postgres) project — see **Local
+development** below for the one-time setup. Once your `.env` is filled in:
+
 ```bash
 npm install
 npm start
 ```
 
-Then open `http://localhost:3000`. The SQLite database is created
-automatically at `db/podium.db` on first run, with the five classes
-pre-seeded.
+Then open `http://localhost:3000`.
 
 ## Decisions taken (per the brief's [DECIDE] defaults)
 
@@ -32,8 +33,8 @@ these in one place and the rest of the app follows:
 
 ```
 server.js            Express app + all /api routes
-db/schema.sql         SQLite schema
-db/db.js               DB init + seeds the five classes
+db/schema.sql         Postgres schema for Supabase (run once, see below)
+db/db.js               Supabase client (reads SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)
 public/                Static frontend (vanilla HTML/CSS/JS, ES modules)
   index.html            App shell + nav + autoplay gate
   css/style.css          Dark, high-contrast, TV-legible theme
@@ -55,13 +56,21 @@ public/                Static frontend (vanilla HTML/CSS/JS, ES modules)
 
 ## Data model
 
-SQLite tables: `classes`, `pupils`, `question_sets`, `questions`,
-`attempts`, `awards`, `meta`. Season and weekly totals are both derived
-from `awards` (weekly points/awards are filtered by `week = current
-week`); nothing is denormalised onto `pupils`, so there's no sync to get
-wrong. `meta.current_week` is the rolling week marker — the teacher
-advances it from the Weekly screen, which is exactly what resets "of the
-week" awards (season totals are untouched, since they sum every week).
+Postgres tables (in Supabase): `classes`, `pupils`, `question_sets`,
+`questions`, `attempts`, `awards`, `meta`. Season and weekly totals are
+both derived from `awards` (weekly points/awards are filtered by `week =
+current week`); nothing is denormalised onto `pupils`, so there's no sync
+to get wrong. `meta.current_week` is the rolling week marker — the
+teacher advances it from the Weekly screen, which is exactly what resets
+"of the week" awards (season totals are untouched, since they sum every
+week).
+
+Recording a question-mode attempt needs two inserts (the attempt itself,
+then the award it earns) to either both land or neither does, so that's
+done via a small Postgres function, `record_attempt(...)`, defined in
+`db/schema.sql` and called from `server.js` with `supabase.rpc(...)`.
+Every other read/write is plain Supabase query-builder calls
+(`.from(table).select()/.insert()/.update()/.delete()`).
 
 ## Logo assets
 
@@ -91,33 +100,56 @@ spray-splatter rank badges, torn-sticker card corners, and corner
 paint-cloud textures are all done in pure CSS (`public/css/style.css`) —
 no extra image assets required.
 
-## Deployment
+## Local development (Supabase)
 
-### Vercel
+One-time setup, then `npm install && npm start` works from any machine —
+no compiler, no Python, nothing native to build.
+
+1. **Create a Supabase project** at [supabase.com](https://supabase.com)
+   (the free tier is plenty for a classroom app). Wait for it to finish
+   provisioning.
+2. **Run the schema.** In the Supabase dashboard, open your project →
+   **SQL Editor** → New query, paste in the entire contents of
+   `db/schema.sql`, and run it. This creates all the tables, seeds the
+   five classes, and creates the `record_attempt` function. It's safe to
+   re-run if you ever need to.
+3. **Get your API keys.** Project → **Project Settings** → **API**.
+   You need the **Project URL** and the **`service_role`** secret key
+   (not the `anon` key — the service role key is what lets this backend
+   read/write everything; it's never sent to the browser).
+4. **Set up your local env file:**
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit `.env` and fill in `SUPABASE_URL` and
+   `SUPABASE_SERVICE_ROLE_KEY` with the values from step 3.
+5. **Install and run:**
+   ```bash
+   npm install
+   npm start
+   ```
+   Open `http://localhost:3000`.
+
+`.env` is gitignored — never commit it. `db/db.js` throws a clear error
+on startup if the two env vars aren't set, rather than failing
+mysteriously later.
+
+## Deploying to Vercel
 
 `vercel.json` routes all requests through `server.js` as a single
-serverless function (`@vercel/node`), so `vercel deploy` works out of the
-box for trying the app out.
+serverless function. Since persistence is now Supabase (a real hosted
+Postgres database reachable over HTTPS), there's no serverless
+filesystem caveat to work around — this is the straightforward,
+correct setup for Vercel.
 
-**Persistence caveat:** Vercel serverless functions have an ephemeral,
-non-shared filesystem — a SQLite file written there does **not**
-reliably survive between invocations or deployments, which conflicts
-with the brief's "must survive across sessions" requirement. Two ways to
-get real persistence:
-
-- **Recommended for a real classroom rollout:** run this as a normal
-  always-on Node process instead (`npm start`) — a small always-on
-  device plugged into the classroom TV, or a persistent host like
-  Render/Railway/a school server. `better-sqlite3` then works exactly as
-  built, no changes needed.
-- **To stay on Vercel serverless:** swap the persistence layer for a
-  hosted database (e.g. Vercel Postgres or Turso/libSQL) — `db/db.js` is
-  the only file that would need to change, since every route goes
-  through `db.prepare(...)`.
-
-Set `PODIUM_DB_PATH` (defaults to `db/podium.db`) if you need the SQLite
-file to live somewhere else, e.g. `/tmp/podium.db` when experimenting on
-Vercel.
+1. Import the repo into Vercel as a new project.
+2. In the Vercel project's **Settings → Environment Variables**, add the
+   same two variables from your `.env`: `SUPABASE_URL` and
+   `SUPABASE_SERVICE_ROLE_KEY`.
+3. Deploy. Local dev and the Vercel deployment point at the same
+   Supabase project by default, so data created from one shows up in the
+   other — that's normal and usually what you want for a single
+   classroom's data.
 
 ## Validation
 
@@ -126,4 +158,7 @@ npm test   # node --check on server.js and db/db.js
 ```
 
 All frontend ES modules under `public/js/` were checked with
-`node --input-type=module --check` during development.
+`node --input-type=module --check` during development. The rewritten
+`server.js` routes (aggregation, sorting, the `record_attempt` RPC call)
+were exercised end-to-end over real HTTP against an in-memory mock of the
+Supabase client during development, standing in for a live project.
