@@ -1,10 +1,26 @@
 const express = require('express');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 const supabase = require('./db/db');
+const { attachProfile, requireApproved, requireRole } = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+const dashboardRoutes = require('./routes/dashboard');
+const trackerRoutes = require('./routes/trackers');
+const avatarRoutes = require('./routes/avatar');
+const { ensureAvatarBucket } = require('./lib/storage');
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
+app.use(attachProfile());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/trackers', trackerRoutes);
+app.use('/api/avatar', avatarRoutes);
 
 // ---------- helpers ----------
 
@@ -50,14 +66,16 @@ function flourishFor(classRowObj, points) {
 
 // ---------- classes ----------
 
+// public: non-sensitive reference data, and the signup form needs it
+// before an account exists to be "approved"
 app.get('/api/classes', route(async (req, res) => {
   const rows = must(await supabase.from('classes').select('*').order('name'));
   res.json(rows.map(classRow));
 }));
 
-// ---------- pupils ----------
+// ---------- pupils (staff-only: full roster + season points) ----------
 
-app.get('/api/pupils', route(async (req, res) => {
+app.get('/api/pupils', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const week = await getCurrentWeek();
   const pupils = must(
     await supabase.from('pupils').select('id, name, class_id, active, classes(name, colour_hex)').order('name')
@@ -80,7 +98,7 @@ app.get('/api/pupils', route(async (req, res) => {
   res.json(rows);
 }));
 
-app.post('/api/pupils', route(async (req, res) => {
+app.post('/api/pupils', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const { name, class_id } = req.body || {};
   if (!name || !class_id) return res.status(400).json({ error: 'name and class_id are required' });
   const cls = must(await supabase.from('classes').select('id').eq('id', class_id).maybeSingle());
@@ -91,7 +109,7 @@ app.post('/api/pupils', route(async (req, res) => {
   res.status(201).json({ id: data.id });
 }));
 
-app.put('/api/pupils/:id', route(async (req, res) => {
+app.put('/api/pupils/:id', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const { name, class_id, active } = req.body || {};
   const pupil = must(await supabase.from('pupils').select('*').eq('id', req.params.id).maybeSingle());
   if (!pupil) return res.status(404).json({ error: 'not found' });
@@ -112,14 +130,14 @@ app.put('/api/pupils/:id', route(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.delete('/api/pupils/:id', route(async (req, res) => {
+app.delete('/api/pupils/:id', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   must(await supabase.from('pupils').delete().eq('id', req.params.id));
   res.json({ ok: true });
 }));
 
-// ---------- question sets ----------
+// ---------- question sets (staff-only — building/running rounds) ----------
 
-app.get('/api/question-sets', route(async (req, res) => {
+app.get('/api/question-sets', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const sets = must(
     await supabase.from('question_sets').select('id, term, subject, created_at').order('created_at', { ascending: false })
   );
@@ -131,7 +149,7 @@ app.get('/api/question-sets', route(async (req, res) => {
   res.json(rows);
 }));
 
-app.get('/api/question-sets/:id', route(async (req, res) => {
+app.get('/api/question-sets/:id', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const qs = must(await supabase.from('question_sets').select('*').eq('id', req.params.id).maybeSingle());
   if (!qs) return res.status(404).json({ error: 'not found' });
   const questions = must(
@@ -145,7 +163,7 @@ app.get('/api/question-sets/:id', route(async (req, res) => {
 }));
 
 // play view: no answers leaked to the client before grading
-app.get('/api/question-sets/:id/play', route(async (req, res) => {
+app.get('/api/question-sets/:id/play', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const qs = must(await supabase.from('question_sets').select('id, term, subject').eq('id', req.params.id).maybeSingle());
   if (!qs) return res.status(404).json({ error: 'not found' });
   const questions = must(
@@ -170,7 +188,7 @@ async function saveQuestions(questionSetId, questions) {
   must(await supabase.from('questions').insert(rows));
 }
 
-app.post('/api/question-sets', route(async (req, res) => {
+app.post('/api/question-sets', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const { term, subject, questions } = req.body || {};
   if (!term || !subject || !Array.isArray(questions) || questions.length < 3) {
     return res.status(400).json({ error: 'term, subject and at least 3 questions are required' });
@@ -182,7 +200,7 @@ app.post('/api/question-sets', route(async (req, res) => {
   res.status(201).json({ id: data.id });
 }));
 
-app.put('/api/question-sets/:id', route(async (req, res) => {
+app.put('/api/question-sets/:id', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const { term, subject, questions } = req.body || {};
   const qs = must(await supabase.from('question_sets').select('*').eq('id', req.params.id).maybeSingle());
   if (!qs) return res.status(404).json({ error: 'not found' });
@@ -196,14 +214,14 @@ app.put('/api/question-sets/:id', route(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.delete('/api/question-sets/:id', route(async (req, res) => {
+app.delete('/api/question-sets/:id', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   must(await supabase.from('question_sets').delete().eq('id', req.params.id));
   res.json({ ok: true });
 }));
 
-// ---------- attempts / awards ----------
+// ---------- attempts / awards (staff-only: running a round, manual awards) ----------
 
-app.post('/api/attempts', route(async (req, res) => {
+app.post('/api/attempts', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const { pupil_id, question_set_id, answers } = req.body || {};
   if (!pupil_id || !question_set_id || !Array.isArray(answers)) {
     return res.status(400).json({ error: 'pupil_id, question_set_id and answers are required' });
@@ -246,7 +264,7 @@ app.post('/api/attempts', route(async (req, res) => {
   });
 }));
 
-app.post('/api/awards', route(async (req, res) => {
+app.post('/api/awards', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const { pupil_id, points, note } = req.body || {};
   if (!pupil_id || !Number.isFinite(points)) {
     return res.status(400).json({ error: 'pupil_id and numeric points are required' });
@@ -266,9 +284,9 @@ app.post('/api/awards', route(async (req, res) => {
   res.status(201).json({ ok: true });
 }));
 
-// ---------- standings ----------
+// ---------- standings (any signed-in, approved account) ----------
 
-app.get('/api/standings/individual', route(async (req, res) => {
+app.get('/api/standings/individual', requireApproved, route(async (req, res) => {
   const pupils = must(
     await supabase.from('pupils').select('id, name, class_id, classes(name, colour_hex)').eq('active', true)
   );
@@ -311,11 +329,11 @@ async function classStandingsRows(weekFilter) {
     .map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
-app.get('/api/standings/classes', route(async (req, res) => {
+app.get('/api/standings/classes', requireApproved, route(async (req, res) => {
   res.json(await classStandingsRows(null));
 }));
 
-app.get('/api/standings/weekly', route(async (req, res) => {
+app.get('/api/standings/weekly', requireApproved, route(async (req, res) => {
   const week = await getCurrentWeek();
 
   const pupils = must(
@@ -349,11 +367,11 @@ app.get('/api/standings/weekly', route(async (req, res) => {
 
 // ---------- week marker ----------
 
-app.get('/api/meta/week', route(async (req, res) => {
+app.get('/api/meta/week', requireApproved, route(async (req, res) => {
   res.json({ week: await getCurrentWeek() });
 }));
 
-app.post('/api/meta/week/advance', route(async (req, res) => {
+app.post('/api/meta/week/advance', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const week = (await getCurrentWeek()) + 1;
   must(await supabase.from('meta').update({ value: String(week) }).eq('key', 'current_week'));
   res.json({ week });
@@ -368,6 +386,7 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 if (require.main === module) {
+  ensureAvatarBucket().catch((err) => console.warn('avatar bucket check failed:', err.message));
   app.listen(PORT, () => console.log(`Podium server running on http://localhost:${PORT}`));
 }
 

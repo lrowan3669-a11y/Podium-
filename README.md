@@ -2,7 +2,8 @@
 
 A classroom reward app for an Alternative Provision cohort. Two season-long
 F1-style championships run in parallel — individual pupils and classes —
-built teacher-driven for a classroom TV, per `PODIUM_BRIEF.md`.
+alongside per-pupil dashboards (academic progress, PSD tracker, and more to
+come) with role-based accounts for pupils, staff and parents.
 
 ## Quick start
 
@@ -23,7 +24,12 @@ these in one place and the rest of the app follows:
 
 1. **Points per attempt** — 1 point per correct answer (3/3 = 3 points).
    See `score`/`points` in the `/api/attempts` handler in `server.js`.
-2. **Who drives it** — teacher-driven on the classroom TV, no pupil logins.
+2. **Who drives it** — Question Mode itself is still teacher-run on the
+   classroom TV (`POST /api/attempts` requires a teacher/admin session).
+   This decision predates the headteacher's later ask for full pupil/
+   parent/staff accounts (see **Accounts, roles & approvals** below) —
+   pupils now do have logins for their *own dashboard*, just not for
+   running question rounds themselves.
 3. **Class score** — average points per pupil (`class score = total class
    points / pupils in class`), so a small class can compete. See
    `classStandingsRows()` in `server.js`.
@@ -32,21 +38,40 @@ these in one place and the rest of the app follows:
 ## Project structure
 
 ```
-server.js            Express app + all /api routes
-db/schema.sql         Postgres schema for Supabase (run once, see below)
-db/db.js               Supabase client (reads SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)
+server.js            Express app: wiring, existing scoreboard routes
+db/schema.sql          Postgres schema for Supabase (run once, see below)
+db/db.js                Supabase client — service_role, for data (server-side only)
+db/authClient.js         Fresh Supabase client per call — for auth ops specifically
+lib/session.js          Our own httpOnly-cookie sessions (not Supabase's JWT lifecycle)
+lib/authorization.js    canAccessPupil() / accessibleClassIds() — the one place role-scoping logic lives
+lib/storage.js          Ensures the private 'avatars' bucket exists
+lib/dbHelpers.js        must({data,error}) — throw on Supabase error, else unwrap
+middleware/auth.js      attachProfile / requireAuth / requireApproved / requireRole
+routes/auth.js          signup, login, logout, me
+routes/admin.js         pending approvals, approve (+ link to pupil/class), reject
+routes/dashboard.js     role-scoped "what should I see" + single-pupil detail
+routes/trackers.js      Academic Progress + PSD tracker read/write
+routes/avatar.js        Upload/serve profile photos — always authorization-checked first
 public/                Static frontend (vanilla HTML/CSS/JS, ES modules)
-  index.html            App shell + nav + autoplay gate
-  css/style.css          Dark, high-contrast, TV-legible theme
-  js/main.js             Hash router
-  js/api.js               Fetch client for the backend
-  js/sound.js              Web Audio cues per class theme
-  js/logo.js               Placeholder inline-SVG Podium mark
-  js/screens/*.js           One module per screen (see below)
+  index.html             App shell: topbar, responsive nav, autoplay gate
+  css/style.css           Dark, high-contrast, graffiti-styled, responsive theme
+  js/main.js              Auth-aware hash router + nav rendering
+  js/api.js                Fetch client for the backend
+  js/session.js             In-memory "who am I" store, read by any screen
+  js/avatarWidget.js        Reusable avatar <img>-with-initials-fallback component
+  js/pupilDetailView.js     Shared pupil dashboard view (self, teacher, parent, admin all use it)
+  js/sound.js               Web Audio cues per class theme
+  js/logo.js                Placeholder inline-SVG Podium mark
+  js/screens/*.js            One module per screen (see below)
 ```
 
 ### Screens
 
+- `#/login`, `#/signup` — account creation and sign-in. Every signup starts `pending` until an admin approves it.
+- `#/pending` — holding screen for an approved-but-not-yet-linked or still-pending account.
+- `#/dashboard` — role-shaped landing page: a pupil sees their own detail view; a teacher/parent sees a card grid of their pupils/children; an admin sees stats + a link to approvals.
+- `#/pupil/:id` — the shared pupil detail view (avatar, Academic Progress, PSD tracker, "coming soon" cards for the rest of the brief's tracked domains) — reachable by the pupil themselves, or anyone with access to that pupil (see **Access model** below).
+- `#/approvals` — admin only: the pending-signups queue, with the linking UI (pupil/class picker) that actually grants access.
 - `#/individual` — season-long individual leaderboard, rows tinted by class colour.
 - `#/classes` — the Constructors' Board (five classes, average per pupil).
 - `#/weekly` — Weekly Champion + Weekly Class Champion, plus the week-advance control.
@@ -54,9 +79,71 @@ public/                Static frontend (vanilla HTML/CSS/JS, ES modules)
 - `#/admin` — teacher admin: pupils, question sets, manual point awards, class reference.
 - `#/tv` — read-only, auto-rotating (individual → classes → weekly) for the classroom TV.
 
+## Accounts, roles & approvals
+
+Every person — pupil, teacher, parent — signs up with an email and
+password (handled by Supabase Auth; this app never stores a password
+itself). Every new account starts `pending` and simply **cannot sign in**
+until an admin approves it from `#/approvals` and links it to a real
+record:
+
+- **Pupil** signup → admin either links it to an existing pupil (added
+  earlier via Teacher Admin) or creates a new pupil record on the spot.
+- **Teacher** signup → admin ticks which class(es) they're linked to.
+- **Parent** signup → admin links them to their child/children's pupil
+  record(s) (by pupil ID for now — there's no name-search picker yet).
+
+### Access model
+
+Enforced centrally in `lib/authorization.js` and applied by every route
+that touches pupil data:
+
+| Role | Can see |
+|---|---|
+| `admin` | Everyone and everything, plus the approvals queue |
+| `teacher` | Only pupils in class(es) they're linked to |
+| `parent` | Only their explicitly linked child/children |
+| `pupil` | Only their own record |
+
+### The first admin (bootstrap)
+
+There's no self-service way to become an admin — a signup can only ever
+request `pupil`/`teacher`/`parent`, and only an *existing* admin can
+approve accounts. So the very first admin (the headteacher) is promoted
+by hand, once, directly in the database:
+
+1. Have the headteacher sign up normally (role: pick any — it gets
+   overwritten in the next step) at `#/signup`.
+2. In the Supabase SQL Editor, run:
+   ```sql
+   update profiles set role = 'admin', approval_status = 'approved'
+   where email = 'headteacher@example.org';
+   ```
+3. They can now sign in and approve everyone else from `#/approvals`.
+
+### Security model
+
+Every table has Row Level Security **enabled with zero policies** (see
+the bottom of `db/schema.sql`) — the browser never talks to Supabase
+directly at all, only to this Express server, which always connects with
+the `service_role` key (which bypasses RLS by design). So "RLS on, no
+policies" is a backstop, not the enforcement mechanism: the real
+authorization logic lives in one place, `lib/authorization.js` +
+`middleware/auth.js`, not duplicated between RLS policies and
+application code.
+
+Profile photos follow the same principle: they're stored in a **private**
+Supabase Storage bucket (`avatars`, created automatically on first
+server start by `lib/storage.js`) and are only ever served through
+`GET /api/avatar/:profileId`, which runs the same access check as the
+rest of the app before streaming the image bytes back. There is no
+public or signed URL a browser could get to directly — a teacher can see
+their own pupils' photos, a parent their child's, an admin everyone's,
+and that's it.
+
 ## Data model
 
-Postgres tables (in Supabase): `classes`, `pupils`, `question_sets`,
+**Scoreboard** (original brief): `classes`, `pupils`, `question_sets`,
 `questions`, `attempts`, `awards`, `meta`. Season and weekly totals are
 both derived from `awards` (weekly points/awards are filtered by `week =
 current week`); nothing is denormalised onto `pupils`, so there's no sync
@@ -71,6 +158,26 @@ done via a small Postgres function, `record_attempt(...)`, defined in
 `db/schema.sql` and called from `server.js` with `supabase.rpc(...)`.
 Every other read/write is plain Supabase query-builder calls
 (`.from(table).select()/.insert()/.update()/.delete()`).
+
+**Accounts** (added for the headteacher's dashboard brief):
+`profiles` (one row per signed-up person, keyed to Supabase's own
+`auth.users`), `parent_pupil_links`, `teacher_class_links`, `sessions`
+(our own app-level session tokens, hashed at rest — see **Security
+model** above).
+
+**Tracked domains**: `academic_progress` (subject_area/skill/score 1-5 —
+English: reading/writing/speaking/listening, Maths:
+adding/subtracting/multiplication/division, Other:
+science/history/geography/creative_arts) and `psd_entries` (category/score
+1-5 — the six PSD categories from the brief). Both are staff-write,
+family-read: any teacher/admin with access to the pupil can add an entry,
+and the pupil/their parent/any linked teacher can view the history. The
+remaining domains from the brief (Sporting, Business & Enterprise,
+Attendance Tracker, Strengths Profile/Clifton Strengths, Educational
+Enhancements) show as "coming soon" cards on the pupil dashboard —
+the same `subject_area/skill/score` shape in `academic_progress` (or a
+sibling table following the same pattern) is the natural next step for
+each one.
 
 ## Logo assets
 
@@ -129,10 +236,16 @@ no compiler, no Python, nothing native to build.
    npm start
    ```
    Open `http://localhost:3000`.
+6. **Sign up, then promote yourself to admin.** Create an account at
+   `#/signup`, then follow **The first admin (bootstrap)** above to
+   approve it via a one-off SQL statement. Every account after that gets
+   approved normally from `#/approvals`.
 
 `.env` is gitignored — never commit it. `db/db.js` throws a clear error
 on startup if the two env vars aren't set, rather than failing
-mysteriously later.
+mysteriously later. The private `avatars` storage bucket is created
+automatically the first time the server starts — no manual dashboard
+step needed for that part.
 
 ## Deploying to Vercel
 
@@ -154,11 +267,18 @@ correct setup for Vercel.
 ## Validation
 
 ```bash
-npm test   # node --check on server.js and db/db.js
+npm test   # node --check across server.js, db/, lib/, middleware/, routes/
 ```
 
 All frontend ES modules under `public/js/` were checked with
-`node --input-type=module --check` during development. The rewritten
-`server.js` routes (aggregation, sorting, the `record_attempt` RPC call)
-were exercised end-to-end over real HTTP against an in-memory mock of the
-Supabase client during development, standing in for a live project.
+`node --input-type=module --check` during development. The full backend —
+scoreboard routes, the `record_attempt` RPC call, and the entire
+auth/roles/approval/tracker/avatar flow (signup → pending → admin
+approval + linking → login → role-scoped access, including the negative
+cases: an unlinked teacher denied a pupil's data, a parent blocked from
+writing tracker entries, a rejected account unable to sign in) — was
+exercised end-to-end over real HTTP against an in-memory mock of the
+Supabase client during development, standing in for a live project this
+sandbox can't reach. The dashboard screens were additionally driven
+through a real headless browser at desktop, tablet, and phone viewports
+to check the responsive layout and the login → dashboard flow visually.

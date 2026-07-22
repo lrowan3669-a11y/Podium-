@@ -28,19 +28,18 @@
 
 <div id="app" class="app hidden">
   <header class="topbar">
-    <a href="#/individual" class="brand">
+    <a href="#/dashboard" class="brand">
       <span id="header-mark" class="header-mark"></span>
       <span class="brand-word">PODIUM</span>
     </a>
-    <nav class="nav">
-      <a href="#/individual" data-route="individual">Individual</a>
-      <a href="#/classes" data-route="classes">Constructors</a>
-      <a href="#/weekly" data-route="weekly">Weekly</a>
-      <a href="#/play" data-route="play">Question Mode</a>
-      <a href="#/tv" data-route="tv">TV Mode</a>
-      <a href="#/admin" data-route="admin">Teacher Admin</a>
-    </nav>
-    <div class="week-pill" id="week-pill">Week —</div>
+    <button id="nav-toggle" class="nav-toggle" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav" id="nav-links"></nav>
+    <div class="topbar-right">
+      <div class="week-pill" id="week-pill">Week —</div>
+      <div id="user-badge" class="user-badge hidden"></div>
+    </div>
   </header>
 
   <main id="screen" class="screen"></main>

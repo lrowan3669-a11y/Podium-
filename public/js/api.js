@@ -2,20 +2,61 @@ const BASE = '/api';
 
 async function request(path, options) {
   const res = await fetch(BASE + path, {
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed: ${res.status}`);
+    const err = new Error(body.error || `Request failed: ${res.status}`);
+    err.status = res.status;
+    err.pending = !!body.pending;
+    throw err;
   }
   if (res.status === 204) return null;
   return res.json();
 }
 
-export const api = {
-  getClasses: () => request('/classes'),
+async function upload(path, file, fieldName = 'avatar') {
+  const form = new FormData();
+  form.append(fieldName, file);
+  const res = await fetch(BASE + path, { method: 'POST', credentials: 'same-origin', body: form });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Upload failed: ${res.status}`);
+  }
+  return res.json();
+}
 
+export const api = {
+  // ---- auth ----
+  signup: (data) => request('/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+  me: () => request('/auth/me'),
+
+  // ---- avatar ----
+  uploadMyAvatar: (file) => upload('/avatar/me', file),
+  avatarUrl: (profileId) => `${BASE}/avatar/${profileId}`,
+
+  // ---- dashboard ----
+  getMyDashboard: () => request('/dashboard/me'),
+  getPupilDashboard: (pupilId) => request(`/dashboard/pupil/${pupilId}`),
+
+  // ---- trackers ----
+  getAcademicProgress: (pupilId) => request(`/trackers/academic/${pupilId}`),
+  recordAcademicProgress: (pupilId, data) => request(`/trackers/academic/${pupilId}`, { method: 'POST', body: JSON.stringify(data) }),
+  getPsd: (pupilId) => request(`/trackers/psd/${pupilId}`),
+  recordPsd: (pupilId, data) => request(`/trackers/psd/${pupilId}`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // ---- admin ----
+  getPendingApprovals: () => request('/admin/pending'),
+  getAllProfiles: () => request('/admin/profiles'),
+  approveProfile: (profileId, data) => request(`/admin/approve/${profileId}`, { method: 'POST', body: JSON.stringify(data) }),
+  rejectProfile: (profileId) => request(`/admin/reject/${profileId}`, { method: 'POST' }),
+
+  // ---- classes / pupils (staff) ----
+  getClasses: () => request('/classes'),
   getPupils: () => request('/pupils'),
   createPupil: (data) => request('/pupils', { method: 'POST', body: JSON.stringify(data) }),
   updatePupil: (id, data) => request(`/pupils/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

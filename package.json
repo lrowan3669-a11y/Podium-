@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node --check server.js && node --check db/db.js"
+    "test": "for f in server.js db/db.js db/authClient.js lib/*.js middleware/*.js routes/*.js; do node --check \"$f\" || exit 1; done"
   },
   "repository": {
     "type": "git",
@@ -19,7 +19,9 @@
   "license": "ISC",
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "multer": "^2.2.0"
   }
 }
