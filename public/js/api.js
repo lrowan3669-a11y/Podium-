@@ -39,6 +39,11 @@ export const api = {
   uploadMyAvatar: (file) => upload('/avatar/me', file),
   avatarUrl: (profileId) => `${BASE}/avatar/${profileId}`,
 
+  // ---- school setup ----
+  getSchool: () => request('/school'),
+  updateSchoolName: (name) => request('/school', { method: 'PUT', body: JSON.stringify({ name }) }),
+  uploadSchoolLogo: (file) => upload('/school/logo', file, 'logo'),
+
   // ---- dashboard ----
   getMyDashboard: () => request('/dashboard/me'),
   getPupilDashboard: (pupilId) => request(`/dashboard/pupil/${pupilId}`),

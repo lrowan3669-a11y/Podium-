@@ -219,3 +219,30 @@ alter table psd_entries enable row level security;
 insert into storage.buckets (id, name, public)
 values ('avatars', 'avatars', false)
 on conflict (id) do nothing;
+
+
+-- ============================================================================
+-- Phase 3: one-time school setup (name + logo)
+-- ============================================================================
+
+-- Single-row table (id is always true) — this deployment is one school.
+-- The name/logo show throughout the app, including the pre-login gate
+-- screen, so this table is read through a public API route rather than
+-- being locked down like everything else here.
+create table if not exists school_settings (
+  id boolean primary key default true,
+  constraint school_settings_singleton check (id),
+  name text not null default 'Podium',
+  logo_path text,
+  updated_at timestamptz not null default now()
+);
+insert into school_settings (id) values (true) on conflict (id) do nothing;
+
+alter table school_settings enable row level security;
+
+-- Public bucket — unlike pupil avatars, the school logo has to be visible
+-- before anyone signs in (gate screen, login screen), so there's no
+-- access check to gate it behind. Nothing sensitive lives here.
+insert into storage.buckets (id, name, public)
+values ('school-assets', 'school-assets', true)
+on conflict (id) do nothing;

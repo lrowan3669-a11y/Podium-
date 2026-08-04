@@ -1,9 +1,9 @@
 import { api } from './api.js';
 import { unlockAudio } from './sound.js';
-import { podiumMark } from './logo.js';
 import { escapeHtml } from './util.js';
 import { setCurrentProfile, currentProfile } from './session.js';
 import { avatarHtml, wireAvatarFallbacks } from './avatarWidget.js';
+import { showPlaceholderBranding, refreshSchoolBranding } from './schoolBranding.js';
 import { renderIndividual } from './screens/individual.js';
 import { renderClasses } from './screens/classes.js';
 import { renderWeekly } from './screens/weekly.js';
@@ -16,9 +16,10 @@ import { renderPending } from './screens/pending.js';
 import { renderDashboard } from './screens/dashboard.js';
 import { renderPupilPage } from './screens/pupilPage.js';
 import { renderApprovals } from './screens/approvals.js';
+import { renderSchoolSetup } from './screens/schoolSetup.js';
 
-document.getElementById('gate-mark').innerHTML = podiumMark(72);
-document.getElementById('header-mark').innerHTML = podiumMark(30);
+showPlaceholderBranding();
+refreshSchoolBranding();
 
 const PUBLIC_ROUTES = { login: renderLogin, signup: renderSignup };
 const APP_ROUTES = {
@@ -31,6 +32,7 @@ const APP_ROUTES = {
   admin: renderAdmin,
   tv: renderTv,
   approvals: renderApprovals,
+  school: renderSchoolSetup,
 };
 
 // route key -> { label, roles } — roles omitted means every approved role sees it
@@ -43,6 +45,7 @@ const NAV_ITEMS = [
   { route: 'tv', label: 'TV Mode', roles: ['teacher', 'admin'] },
   { route: 'admin', label: 'Teacher Admin', roles: ['teacher', 'admin'] },
   { route: 'approvals', label: 'Approvals', roles: ['admin'] },
+  { route: 'school', label: 'School Setup', roles: ['admin'] },
 ];
 
 const screenEl = document.getElementById('screen');

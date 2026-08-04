@@ -62,16 +62,20 @@ public/                Static frontend (vanilla HTML/CSS/JS, ES modules)
   js/pupilDetailView.js     Shared pupil dashboard view (self, teacher, parent, admin all use it)
   js/sound.js               Web Audio cues per class theme
   js/logo.js                Placeholder inline-SVG Podium mark
+  js/schoolBranding.js       Loads school name/logo once, applies to gate + header
   js/screens/*.js            One module per screen (see below)
 ```
 
 ### Screens
 
-- `#/login`, `#/signup` — account creation and sign-in. Every signup starts `pending` until an admin approves it.
+- `#/login`, `#/signup` — account creation and sign-in. Every signup starts `pending` until an admin approves it (unless the email is in `ADMIN_BOOTSTRAP_EMAILS` — see below).
 - `#/pending` — holding screen for an approved-but-not-yet-linked or still-pending account.
-- `#/dashboard` — role-shaped landing page: a pupil sees their own detail view; a teacher/parent sees a card grid of their pupils/children; an admin sees stats + a link to approvals.
-- `#/pupil/:id` — the shared pupil detail view (avatar, Academic Progress, PSD tracker, "coming soon" cards for the rest of the brief's tracked domains) — reachable by the pupil themselves, or anyone with access to that pupil (see **Access model** below).
+- `#/dashboard` — role-shaped landing page: a pupil lands on their own Podium hub (see below); a teacher/parent sees a card grid of their pupils/children; an admin sees stats + a link to approvals.
+- `#/pupil/:id` — a pupil's **Podium hub**: header (avatar, class, season points, individual rank, class rank) + a tile grid, one tile per tracked domain. Reachable by the pupil themselves, or anyone with access to that pupil (see **Access model** below).
+- `#/pupil/:id/academic`, `#/pupil/:id/psd` — full drill-down for the two built tracker domains (skill/category grid + an entry form for staff).
+- `#/pupil/:id/<sporting|enterprise|attendance|strengths|enhancements>` — "coming soon" drill-down for the remaining brief domains, so every tile goes somewhere rather than being a dead click.
 - `#/approvals` — admin only: the pending-signups queue, with the linking UI (pupil/class picker) that actually grants access.
+- `#/school` — admin only: set the school name and upload a logo (see **School setup** below).
 - `#/individual` — season-long individual leaderboard, rows tinted by class colour.
 - `#/classes` — the Constructors' Board (five classes, average per pupil).
 - `#/weekly` — Weekly Champion + Weekly Class Champion, plus the week-advance control.
@@ -107,19 +111,39 @@ that touches pupil data:
 
 ### The first admin (bootstrap)
 
-There's no self-service way to become an admin — a signup can only ever
-request `pupil`/`teacher`/`parent`, and only an *existing* admin can
-approve accounts. So the very first admin (the headteacher) is promoted
-by hand, once, directly in the database:
+There's no self-service way to become an admin through the signup form —
+it only ever offers `pupil`/`teacher`/`parent`, and only an *existing*
+admin can approve accounts from `#/approvals`. So the very first admin
+(and any test admin accounts) are created via an env var:
 
-1. Have the headteacher sign up normally (role: pick any — it gets
-   overwritten in the next step) at `#/signup`.
-2. In the Supabase SQL Editor, run:
-   ```sql
-   update profiles set role = 'admin', approval_status = 'approved'
-   where email = 'headteacher@example.org';
-   ```
-3. They can now sign in and approve everyone else from `#/approvals`.
+1. Set `ADMIN_BOOTSTRAP_EMAILS` (comma-separated) in your `.env` /
+   Vercel environment variables — e.g.
+   `ADMIN_BOOTSTRAP_EMAILS=headteacher@example.org,test-admin@example.org`.
+2. Sign up at `#/signup` using one of those exact email addresses (the
+   role you pick in the form doesn't matter — it's overridden).
+3. That account is created **already approved as admin** — sign in right
+   away, no pending queue, no SQL.
+
+Remove the env var (or narrow it to just the real admins) once your
+school's admin accounts are all set up, so it stops being a standing
+door. It's checked server-side in `routes/auth.js` at signup time only —
+existing accounts are unaffected either way.
+
+### School setup (name + logo)
+
+An admin can set the school's name and upload a logo from `#/school`
+(nav item: "School Setup"). Both appear throughout the app — including
+the gate/sign-in screens, which render before anyone is authenticated —
+so this is read through a public `GET /api/school` route, unlike
+everything else in this section. Until a logo is uploaded, the app falls
+back to the placeholder inline-SVG Podium mark (see **Logo assets**
+below); once one exists, it replaces the mark everywhere via
+`public/js/schoolBranding.js`.
+
+The logo lives in its own **public** Supabase Storage bucket
+(`school-assets`, distinct from the private `avatars` bucket) since a
+school logo isn't sensitive and needs to be visible pre-login — there's
+no access check to design around for this one asset.
 
 ### Security model
 
@@ -174,18 +198,27 @@ family-read: any teacher/admin with access to the pupil can add an entry,
 and the pupil/their parent/any linked teacher can view the history. The
 remaining domains from the brief (Sporting, Business & Enterprise,
 Attendance Tracker, Strengths Profile/Clifton Strengths, Educational
-Enhancements) show as "coming soon" cards on the pupil dashboard —
-the same `subject_area/skill/score` shape in `academic_progress` (or a
-sibling table following the same pattern) is the natural next step for
-each one.
+Enhancements) show as "coming soon" tiles on the pupil hub, each with
+its own drill-down route — the same `subject_area/skill/score` shape in
+`academic_progress` (or a sibling table following the same pattern) is
+the natural next step for each one.
+
+**School settings**: `school_settings` — a single-row table (name +
+logo path) for the one-time school setup described below.
 
 ## Logo assets
 
-The brief references three provided image files
+The **normal way to set a real logo now is `#/school`** (admin-only) —
+upload it through the app and it replaces the placeholder everywhere
+automatically, no code changes needed. See **School setup** above.
+
+The brief also references three specific provided image files
 (`podium-logo-full.png`, `podium-mark-transparent.png`, `podium-icon.png`)
-but they weren't attached to the build brief, so `public/js/logo.js` and
+which weren't attached to the build brief, so `public/js/logo.js` and
 `public/img/favicon.svg` ship a placeholder inline-SVG mark (podium blocks
-+ star) in the meantime. Once you have the real files:
++ star) as the fallback shown before any logo is uploaded. If you'd
+rather bake those specific files in directly instead of uploading via
+`#/school`:
 
 1. Drop them into `public/img/`.
 2. Swap the `<img>`/inline-SVG usages in `public/index.html` and
@@ -228,18 +261,19 @@ no compiler, no Python, nothing native to build.
    ```bash
    cp .env.example .env
    ```
-   Then edit `.env` and fill in `SUPABASE_URL` and
-   `SUPABASE_SERVICE_ROLE_KEY` with the values from step 3.
+   Fill in `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from step 3,
+   and set `ADMIN_BOOTSTRAP_EMAILS` to your own email (see **The first
+   admin (bootstrap)** above).
 5. **Install and run:**
    ```bash
    npm install
    npm start
    ```
    Open `http://localhost:3000`.
-6. **Sign up, then promote yourself to admin.** Create an account at
-   `#/signup`, then follow **The first admin (bootstrap)** above to
-   approve it via a one-off SQL statement. Every account after that gets
-   approved normally from `#/approvals`.
+6. **Sign up** at `#/signup` using the email you put in
+   `ADMIN_BOOTSTRAP_EMAILS` — you're an approved admin immediately, no
+   SQL needed. Every other account after that gets approved normally
+   from `#/approvals`.
 
 `.env` is gitignored — never commit it. `db/db.js` throws a clear error
 on startup if the two env vars aren't set, rather than failing
@@ -270,10 +304,10 @@ HTTPS), there's no serverless-filesystem caveat to work around.
    bit through there" gets you: push a commit, Vercel redeploys
    automatically, no manual redeploy step.
 3. **Add environment variables**: Project **Settings → Environment
-   Variables** → add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (same
-   values as your local `.env`) for the **Production** environment (and
-   Preview, if you want preview deployments to also work against real
-   data).
+   Variables** → add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
+   `ADMIN_BOOTSTRAP_EMAILS` (same values as your local `.env`) for the
+   **Production** environment (and Preview, if you want preview
+   deployments to also work against real data).
 4. **Deploy.** Local dev and the Vercel deployment point at the same
    Supabase project by default, so data created from one shows up in the
    other — normal and usually what you want for a single school's data.

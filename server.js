@@ -8,7 +8,8 @@ const adminRoutes = require('./routes/admin');
 const dashboardRoutes = require('./routes/dashboard');
 const trackerRoutes = require('./routes/trackers');
 const avatarRoutes = require('./routes/avatar');
-const { ensureAvatarBucket } = require('./lib/storage');
+const schoolRoutes = require('./routes/school');
+const { ensureAvatarBucket, ensureSchoolAssetsBucket } = require('./lib/storage');
 
 const app = express();
 app.use(express.json());
@@ -21,6 +22,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/trackers', trackerRoutes);
 app.use('/api/avatar', avatarRoutes);
+app.use('/api/school', schoolRoutes);
 
 // ---------- helpers ----------
 
@@ -388,6 +390,7 @@ app.use((req, res, next) => {
 // imports this module as a serverless handler and never hits the
 // require.main branch below, so this can't be gated behind it.
 ensureAvatarBucket().catch((err) => console.warn('avatar bucket check failed:', err.message));
+ensureSchoolAssetsBucket().catch((err) => console.warn('school-assets bucket check failed:', err.message));
 
 const PORT = process.env.PORT || 3000;
 if (require.main === module) {

@@ -1,7 +1,7 @@
 import { api } from '../api.js';
 import { escapeHtml } from '../util.js';
 import { avatarHtml, wireAvatarFallbacks } from '../avatarWidget.js';
-import { renderPupilDetail } from '../pupilDetailView.js';
+import { renderPupilHub } from '../pupilDetailView.js';
 
 export async function renderDashboard(container) {
   const data = await api.getMyDashboard();
@@ -11,7 +11,7 @@ export async function renderDashboard(container) {
       container.innerHTML = `<div class="empty-state">Your account isn't linked to a pupil record yet — check with an admin.</div>`;
       return;
     }
-    return renderPupilDetail(container, data.pupil.id, { canUploadAvatar: true, canRecordTrackers: false });
+    return renderPupilHub(container, data.pupil.id, { canUploadAvatar: true, canRecordTrackers: false });
   }
 
   if (data.role === 'teacher') return renderStaffFamilyList(container, 'My Pupils', data.pupils, 'No pupils in your linked classes yet.');

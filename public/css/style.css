@@ -42,6 +42,12 @@
   --font-display: 'Bungee', 'Arial Black', sans-serif;   /* bold street-sign / stencil */
   --font-tag: 'Rubik Wet Paint', 'Bungee', cursive;         /* dripping spray-paint wordmark */
   --font-marker: 'Permanent Marker', cursive;             /* handwritten tag marker */
+  /* Bungee's "7" glyph reads as a question mark at a glance — never use
+     var(--font-display) where the content is a bare number (points,
+     ranks, scores, multiple-choice answers). This is for exactly those
+     spots; everywhere else (titles, buttons, labels) the surrounding
+     words give enough context that Bungee's style is worth keeping. */
+  --font-numeric: 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
 
   --drip-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Crect width='40' height='5' fill='black'/%3E%3Cpath d='M6 5h3l1 8c0 3-3 3-3 0z' fill='black'/%3E%3Cpath d='M19 5h4l1.5 12c0 3-5 3-5 0z' fill='black'/%3E%3Cpath d='M31 5h3l1 7c0 3-3 3-3 0z' fill='black'/%3E%3C/svg%3E");
 }
@@ -156,6 +162,25 @@ button {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 55%, transparent), 0 0 0 6px transparent;
   transform: rotate(-4deg);
 }
+
+.school-logo-img { object-fit: contain; display: block; }
+.school-logo-gate { width: 72px; height: 72px; }
+.school-logo-header { width: 30px; height: 30px; }
+
+.school-logo-preview {
+  width: 100%;
+  max-width: 320px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.school-logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
 .gate-wordmark {
   font-family: var(--font-tag);
@@ -288,7 +313,7 @@ button {
 .topbar-right { display: flex; align-items: center; gap: 0.8rem; margin-left: auto; }
 
 .week-pill {
-  font-family: var(--font-display);
+  font-family: var(--font-numeric);
   font-size: 0.75rem;
   padding: 0.4rem 0.9rem;
   border-radius: 999px;
@@ -407,7 +432,7 @@ button {
   border-radius: 55% 45% 50% 50% / 45% 55% 45% 55%;
   background: color-mix(in srgb, var(--row-colour, var(--gold)) 22%, var(--bg-raised));
   border: 2px solid color-mix(in srgb, var(--row-colour, var(--gold)) 65%, transparent);
-  font-family: var(--font-display);
+  font-family: var(--font-numeric);
   font-size: 1.15rem;
   color: var(--ink);
   transform: rotate(-5deg);
@@ -424,7 +449,7 @@ button {
 .row-name { font-family: var(--font-display); font-size: 1.15rem; letter-spacing: 0.01em; }
 .row-meta { font-size: 0.8rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.04em; }
 
-.row-points { font-family: var(--font-display); font-size: 1.6rem; z-index: 1; white-space: nowrap; }
+.row-points { font-family: var(--font-numeric); font-size: 1.6rem; z-index: 1; white-space: nowrap; }
 .row-points small { font-size: 0.8rem; color: var(--ink-dim); font-family: 'Arial Black', sans-serif; margin-left: 0.3rem; }
 
 .class-badge {
@@ -506,7 +531,7 @@ button {
   z-index: 1; position: relative;
 }
 .champion-points {
-  font-family: var(--font-display);
+  font-family: var(--font-numeric);
   font-size: 2.6rem;
   margin-top: 1rem;
   z-index: 1; position: relative;
@@ -600,12 +625,12 @@ th { color: var(--ink-dim); text-transform: uppercase; font-size: 0.72rem; lette
   background: var(--bg-card); border: 2px solid var(--line); border-radius: 0.8rem;
   padding: 2.5rem; text-align: center; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
-.question-text { font-family: var(--font-display); font-size: clamp(1.3rem, 3vw, 1.9rem); margin-bottom: 2rem; }
+.question-text { font-family: var(--font-numeric); font-weight: 900; font-size: clamp(1.3rem, 3vw, 1.9rem); margin-bottom: 2rem; }
 .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 @media (max-width: 700px) { .option-grid { grid-template-columns: 1fr; } }
 .option-btn {
   background: var(--bg-raised); border: 2px solid var(--line); color: var(--ink);
-  padding: 1.2rem; border-radius: 0.5rem; font-family: var(--font-display); font-size: 1rem;
+  padding: 1.2rem; border-radius: 0.5rem; font-family: var(--font-numeric); font-size: 1.05rem; font-weight: 900;
 }
 .option-btn:hover { border-color: var(--gold); }
 .option-btn.correct { border-color: var(--c-hamilton); background: color-mix(in srgb, var(--c-hamilton) 25%, var(--bg-raised)); }
@@ -699,12 +724,12 @@ th { color: var(--ink-dim); text-transform: uppercase; font-size: 0.72rem; lette
   margin-bottom: 0;
 }
 .pupil-card:hover { border-color: var(--gold); }
-.pupil-card-points { margin-left: auto; font-family: var(--font-display); font-size: 1.4rem; white-space: nowrap; }
+.pupil-card-points { margin-left: auto; font-family: var(--font-numeric); font-size: 1.4rem; white-space: nowrap; }
 .pupil-card-points small { font-size: 0.75rem; color: var(--ink-dim); font-family: 'Arial Black', sans-serif; }
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .stat-card { text-align: center; }
-.stat-value { display: block; font-family: var(--font-display); font-size: 2.6rem; color: var(--gold); }
+.stat-value { display: block; font-family: var(--font-numeric); font-size: 2.6rem; color: var(--gold); }
 .stat-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); }
 
 .pupil-header {
@@ -712,7 +737,20 @@ th { color: var(--ink-dim); text-transform: uppercase; font-size: 0.72rem; lette
   border-left: 8px solid var(--row-colour, var(--gold));
 }
 .pupil-header-main { display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
-.pupil-points { display: inline-block; margin-top: 0.3rem; color: var(--ink-dim); font-size: 0.9rem; }
+
+.podium-stats { display: flex; gap: 1.4rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.podium-stat { display: flex; flex-direction: column; }
+.podium-stat-value { font-family: var(--font-numeric); font-size: 1.4rem; color: var(--gold); line-height: 1.1; }
+.podium-stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-dim); }
+
+.back-link {
+  display: inline-block;
+  margin: 1rem 0;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+.back-link:hover { color: var(--gold); }
 
 /* ---------- trackers ---------- */
 
@@ -733,15 +771,24 @@ th { color: var(--ink-dim); text-transform: uppercase; font-size: 0.72rem; lette
 .tracker-form { margin-top: 1.2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
 
 .coming-soon-title { font-family: var(--font-display); font-weight: normal; font-size: 1.1rem; color: var(--ink-dim); margin: 2rem 0 1rem; }
-.coming-soon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
-@media (max-width: 640px) {
-  .coming-soon-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-  .coming-soon-card { padding: 0.9rem; }
-  .coming-soon-card h4 { font-size: 0.85rem; }
-  .coming-soon-card p { font-size: 0.78rem; }
+
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.tile-card {
+  display: block;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
-.coming-soon-card { opacity: 0.75; }
-.coming-soon-card h4 { margin: 0 0 0.4rem; font-family: var(--font-display); font-weight: normal; }
+.tile-card:hover { transform: translateY(-2px); border-color: var(--gold); }
+.tile-card h4 { margin: 0 0 0.4rem; font-family: var(--font-display); font-weight: normal; }
+.tile-note { font-size: 0.82rem; margin: 0 0 0.6rem; }
+.tile-count { font-family: var(--font-numeric); font-size: 0.85rem; color: var(--gold); }
+.tile-soon { opacity: 0.75; }
+
+@media (max-width: 640px) {
+  .tile-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+  .tile-card { padding: 0.9rem; }
+  .tile-card h4 { font-size: 0.85rem; }
+  .tile-note { font-size: 0.78rem; }
+}
 
 /* ---------- admin approvals ---------- */
 

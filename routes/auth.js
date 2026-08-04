@@ -30,6 +30,17 @@ function publicProfile(p) {
 
 const SELF_SERVICE_ROLES = ['pupil', 'teacher', 'parent']; // admin accounts are promoted manually, never self-signup — see README
 
+// Comma-separated allowlist (set in Vercel/​.env) so the very first admin —
+// and any test admin accounts — can be created just by signing up, no SQL
+// needed. Anyone signing up with a matching email is auto-approved as
+// admin regardless of which role they picked in the form. Leave unset in
+// a real rollout once the school's admins are all set up, so this stops
+// being a live door.
+const BOOTSTRAP_ADMIN_EMAILS = (process.env.ADMIN_BOOTSTRAP_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 router.post('/signup', route(async (req, res) => {
   const { email, password, full_name, role, hint } = req.body || {};
   if (!email || !password || !full_name || !role) {
@@ -41,6 +52,8 @@ router.post('/signup', route(async (req, res) => {
   if (String(password).length < 6) {
     return res.status(400).json({ error: 'password must be at least 6 characters' });
   }
+
+  const isBootstrapAdmin = BOOTSTRAP_ADMIN_EMAILS.includes(String(email).trim().toLowerCase());
 
   const authClient = freshAuthClient();
   const { data: created, error: createErr } = await authClient.auth.admin.createUser({
@@ -54,8 +67,8 @@ router.post('/signup', route(async (req, res) => {
     id: created.user.id,
     email,
     full_name: full_name.trim(),
-    role,
-    approval_status: 'pending',
+    role: isBootstrapAdmin ? 'admin' : role,
+    approval_status: isBootstrapAdmin ? 'approved' : 'pending',
     signup_hint: hint || null,
   });
   if (profileErr) {
@@ -65,7 +78,9 @@ router.post('/signup', route(async (req, res) => {
 
   res.status(201).json({
     ok: true,
-    message: 'Account created. A school admin needs to approve it before you can sign in.',
+    message: isBootstrapAdmin
+      ? 'Admin account created — you can sign in right away.'
+      : 'Account created. A school admin needs to approve it before you can sign in.',
   });
 }));
 

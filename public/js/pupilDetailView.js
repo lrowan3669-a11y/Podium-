@@ -17,12 +17,17 @@ const PSD_LABELS = {
   activities_outside_school: 'Activities Outside School',
 };
 
-const COMING_SOON = [
-  { title: 'Sporting', note: 'Sport-specific achievements and progress.' },
-  { title: 'Business & Enterprise', note: 'Enterprise projects and business skills.' },
-  { title: 'Attendance Tracker', note: 'Day-by-day attendance record.' },
-  { title: 'Strengths Profile', note: "Based on Clifton Strengths." },
-  { title: 'Educational Enhancements', note: 'DofE, outdoor learning, enrichment activities, guest speakers, work experience, community projects, creative & performing arts.' },
+// Built domains link straight to their own drill-down; the rest are
+// "coming soon" placeholders that still navigate somewhere rather than
+// being dead clicks.
+const TILES = [
+  { key: 'academic', title: 'Academic Progress', built: true },
+  { key: 'psd', title: 'PSD Tracker', built: true },
+  { key: 'sporting', title: 'Sporting', note: 'Sport-specific achievements and progress.' },
+  { key: 'enterprise', title: 'Business & Enterprise', note: 'Enterprise projects and business skills.' },
+  { key: 'attendance', title: 'Attendance Tracker', note: 'Day-by-day attendance record.' },
+  { key: 'strengths', title: 'Strengths Profile', note: 'Based on Clifton Strengths.' },
+  { key: 'enhancements', title: 'Educational Enhancements', note: 'DofE, outdoor learning, enrichment activities, guest speakers, work experience, community projects, creative & performing arts.' },
 ];
 
 function scoreDots(score) {
@@ -40,104 +45,193 @@ function latestBySkill(entries) {
   return latest;
 }
 
-export async function renderPupilDetail(container, pupilId, opts = {}) {
-  const { canUploadAvatar, canRecordTrackers } = opts;
-  const detail = await api.getPupilDashboard(pupilId);
-  const { pupil, academicProgress, psd } = detail;
-  const latestAcademic = latestBySkill(academicProgress);
-  const latestPsd = latestBySkill(psd);
-
-  container.innerHTML = `
+function pupilHeaderHtml(pupil, opts, extra) {
+  return `
     <div class="pupil-header card" style="--row-colour:${pupil.colour_hex}">
       <div class="pupil-header-main">
         ${pupil.profile_id ? avatarHtml(pupil.profile_id, pupil.name, 88) : `<span class="avatar avatar-fallback" style="--avatar-size:88px">${escapeHtml(pupil.name[0] || '?')}</span>`}
         <div>
           <h1 class="screen-title" style="margin-bottom:0.3rem">${escapeHtml(pupil.name)}</h1>
           <span class="class-badge" style="--row-colour:${pupil.colour_hex}"><span class="class-dot"></span>${escapeHtml(pupil.class_name)}</span>
-          <span class="pupil-points">${pupil.season_points} season pts</span>
+          ${extra || ''}
         </div>
       </div>
-      ${canUploadAvatar ? `
+      ${opts.canUploadAvatar ? `
         <div class="avatar-upload">
           <label class="btn" for="avatar-file">Change photo</label>
           <input id="avatar-file" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
         </div>` : ''}
-    </div>
+    </div>`;
+}
 
-    <div class="grid-2">
-      <div class="card">
-        <h3>Academic Progress</h3>
-        ${Object.entries(ACADEMIC_LABELS)
-          .map(
-            ([area, def]) => `
-          <div class="tracker-subject">
-            <h4>${escapeHtml(def.label)}</h4>
-            <div class="tracker-skill-grid">
-              ${Object.entries(def.skills)
-                .map(([skill, skillLabel]) => {
-                  const entry = latestAcademic[`${area}:${skill}`];
-                  return `<div class="tracker-skill">
-                    <span class="tracker-skill-label">${escapeHtml(skillLabel)}</span>
-                    ${entry ? scoreDots(entry.score) : `<span class="muted">No entry yet</span>`}
-                  </div>`;
-                })
-                .join('')}
-            </div>
-          </div>`
-          )
-          .join('')}
-        ${canRecordTrackers ? academicFormHtml() : ''}
-      </div>
+function wireHeaderAvatar(container, pupilId, opts, rerender) {
+  wireAvatarFallbacks(container);
+  if (!opts.canUploadAvatar) return;
+  const input = container.querySelector('#avatar-file');
+  if (!input) return;
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      await api.uploadMyAvatar(file);
+      toast('Photo updated');
+      rerender();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+}
 
-      <div class="card">
-        <h3>PSD Tracker</h3>
-        <div class="tracker-skill-grid">
-          ${Object.entries(PSD_LABELS)
-            .map(([cat, label]) => {
-              const entry = latestPsd[cat];
-              return `<div class="tracker-skill">
-                <span class="tracker-skill-label">${escapeHtml(label)}</span>
-                ${entry ? scoreDots(entry.score) : `<span class="muted">No entry yet</span>`}
-              </div>`;
-            })
-            .join('')}
-        </div>
-        ${canRecordTrackers ? psdFormHtml() : ''}
-      </div>
-    </div>
+// ---------- hub: "Your Podium" + tile grid ----------
 
-    <h3 class="coming-soon-title">More on the way</h3>
-    <div class="coming-soon-grid">
-      ${COMING_SOON.map((c) => `
-        <div class="card coming-soon-card">
-          <h4>${escapeHtml(c.title)}</h4>
-          <p class="muted">${escapeHtml(c.note)}</p>
-          <span class="pill">Coming soon</span>
-        </div>`).join('')}
+export async function renderPupilHub(container, pupilId, opts = {}) {
+  const [detail, individualStandings, classStandings] = await Promise.all([
+    api.getPupilDashboard(pupilId),
+    api.getIndividualStandings().catch(() => []),
+    api.getClassStandings().catch(() => []),
+  ]);
+  const { pupil, academicProgress, psd } = detail;
+
+  const myRank = individualStandings.find((r) => String(r.id) === String(pupil.id));
+  const myClassRank = classStandings.find((r) => String(r.id) === String(pupil.class_id));
+
+  const podiumStatHtml = (label, value) => `
+    <div class="podium-stat">
+      <span class="podium-stat-value">${value}</span>
+      <span class="podium-stat-label">${escapeHtml(label)}</span>
+    </div>`;
+
+  const extra = `
+    <div class="podium-stats">
+      ${podiumStatHtml('Season Points', pupil.season_points)}
+      ${podiumStatHtml('Individual Rank', myRank ? `#${myRank.rank}` : '—')}
+      ${podiumStatHtml(`${pupil.class_name} Rank`, myClassRank ? `#${myClassRank.rank}` : '—')}
+    </div>`;
+
+  const academicCount = academicProgress.length;
+  const psdCount = psd.length;
+
+  container.innerHTML = `
+    ${pupilHeaderHtml(pupil, opts, extra)}
+    <h3 class="coming-soon-title">Podium Trackers</h3>
+    <div class="tile-grid">
+      ${TILES.map((t) => tileHtml(pupilId, t, { academicCount, psdCount })).join('')}
     </div>
   `;
 
-  wireAvatarFallbacks(container);
-
-  if (canUploadAvatar) {
-    container.querySelector('#avatar-file').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      try {
-        await api.uploadMyAvatar(file);
-        toast('Photo updated');
-        renderPupilDetail(container, pupilId, opts);
-      } catch (err) {
-        toast(err.message);
-      }
-    });
-  }
-
-  if (canRecordTrackers) {
-    wireAcademicForm(container, pupilId, opts);
-    wirePsdForm(container, pupilId, opts);
-  }
+  wireHeaderAvatar(container, pupilId, opts, () => renderPupilHub(container, pupilId, opts));
 }
+
+function tileHtml(pupilId, tile, counts) {
+  let preview = `<span class="pill">Coming soon</span>`;
+  if (tile.key === 'academic') {
+    preview = counts.academicCount ? `<span class="tile-count">${counts.academicCount} entries</span>` : `<span class="muted">No entries yet</span>`;
+  } else if (tile.key === 'psd') {
+    preview = counts.psdCount ? `<span class="tile-count">${counts.psdCount} entries</span>` : `<span class="muted">No entries yet</span>`;
+  }
+  return `
+    <a class="card tile-card ${tile.built ? 'tile-built' : 'tile-soon'}" href="#/pupil/${pupilId}/${tile.key}">
+      <h4>${escapeHtml(tile.title)}</h4>
+      ${tile.note ? `<p class="muted tile-note">${escapeHtml(tile.note)}</p>` : ''}
+      ${preview}
+    </a>`;
+}
+
+// ---------- academic progress detail ----------
+
+export async function renderAcademicDetail(container, pupilId, opts = {}) {
+  const detail = await api.getPupilDashboard(pupilId);
+  const { pupil, academicProgress } = detail;
+  const latest = latestBySkill(academicProgress);
+
+  container.innerHTML = `
+    ${pupilHeaderHtml(pupil, opts)}
+    <a href="#/pupil/${pupilId}" class="back-link">&larr; Back to dashboard</a>
+    <div class="card">
+      <h3>Academic Progress</h3>
+      ${Object.entries(ACADEMIC_LABELS)
+        .map(
+          ([area, def]) => `
+        <div class="tracker-subject">
+          <h4>${escapeHtml(def.label)}</h4>
+          <div class="tracker-skill-grid">
+            ${Object.entries(def.skills)
+              .map(([skill, skillLabel]) => {
+                const entry = latest[`${area}:${skill}`];
+                return `<div class="tracker-skill">
+                  <span class="tracker-skill-label">${escapeHtml(skillLabel)}</span>
+                  ${entry ? scoreDots(entry.score) : `<span class="muted">No entry yet</span>`}
+                </div>`;
+              })
+              .join('')}
+          </div>
+        </div>`
+        )
+        .join('')}
+      ${opts.canRecordTrackers ? academicFormHtml() : ''}
+    </div>
+  `;
+
+  wireHeaderAvatar(container, pupilId, opts, () => renderAcademicDetail(container, pupilId, opts));
+  if (opts.canRecordTrackers) wireAcademicForm(container, pupilId, opts);
+}
+
+// ---------- PSD tracker detail ----------
+
+export async function renderPsdDetail(container, pupilId, opts = {}) {
+  const detail = await api.getPupilDashboard(pupilId);
+  const { pupil, psd } = detail;
+  const latest = latestBySkill(psd);
+
+  container.innerHTML = `
+    ${pupilHeaderHtml(pupil, opts)}
+    <a href="#/pupil/${pupilId}" class="back-link">&larr; Back to dashboard</a>
+    <div class="card">
+      <h3>PSD Tracker</h3>
+      <div class="tracker-skill-grid">
+        ${Object.entries(PSD_LABELS)
+          .map(([cat, label]) => {
+            const entry = latest[cat];
+            return `<div class="tracker-skill">
+              <span class="tracker-skill-label">${escapeHtml(label)}</span>
+              ${entry ? scoreDots(entry.score) : `<span class="muted">No entry yet</span>`}
+            </div>`;
+          })
+          .join('')}
+      </div>
+      ${opts.canRecordTrackers ? psdFormHtml() : ''}
+    </div>
+  `;
+
+  wireHeaderAvatar(container, pupilId, opts, () => renderPsdDetail(container, pupilId, opts));
+  if (opts.canRecordTrackers) wirePsdForm(container, pupilId, opts);
+}
+
+// ---------- coming-soon detail ----------
+
+export async function renderComingSoonDetail(container, pupilId, tileKey, opts = {}) {
+  const tile = TILES.find((t) => t.key === tileKey);
+  const detail = await api.getPupilDashboard(pupilId);
+  const { pupil } = detail;
+
+  container.innerHTML = `
+    ${pupilHeaderHtml(pupil, opts)}
+    <a href="#/pupil/${pupilId}" class="back-link">&larr; Back to dashboard</a>
+    <div class="card center" style="padding:3rem 2rem">
+      <h3>${escapeHtml(tile ? tile.title : 'Coming soon')}</h3>
+      <p class="muted">${escapeHtml(tile ? tile.note : "This tracker isn't built yet.")}</p>
+      <span class="pill">Coming soon</span>
+    </div>
+  `;
+
+  wireHeaderAvatar(container, pupilId, opts, () => renderComingSoonDetail(container, pupilId, tileKey, opts));
+}
+
+export function isKnownTile(key) {
+  return TILES.some((t) => t.key === key);
+}
+
+// ---------- forms ----------
 
 function academicFormHtml() {
   return `
@@ -227,7 +321,7 @@ function wireAcademicForm(container, pupilId, opts) {
         note: form.querySelector('#ac-note').value.trim(),
       });
       toast('Progress recorded');
-      renderPupilDetail(container, pupilId, opts);
+      renderAcademicDetail(container, pupilId, opts);
     } catch (err) {
       toast(err.message);
     }
@@ -246,7 +340,7 @@ function wirePsdForm(container, pupilId, opts) {
         note: form.querySelector('#psd-note').value.trim(),
       });
       toast('PSD entry recorded');
-      renderPupilDetail(container, pupilId, opts);
+      renderPsdDetail(container, pupilId, opts);
     } catch (err) {
       toast(err.message);
     }
