@@ -283,12 +283,21 @@ step needed for that part.
 
 ## Deploying to Vercel
 
-`vercel.json` routes all requests through `server.js` as a single
-serverless function (`includeFiles: ["public/**"]` makes sure the static
-frontend ships with it — without that, Vercel's function bundler can't
-tell that `express.static('public')` needs the whole folder). Since
+`vercel.json` deploys two things: `server.js` as a Node serverless
+function for everything under `/api/*`, and `public/**` as a separate
+static build for everything else (`/`, JS, CSS, fonts, images), served
+byte-for-byte with no processing. This split matters more than it looks:
+an earlier version routed static files through the Node function via
+`includeFiles`, which let Vercel's function bundler get its hands on
+`public/js/*.js` and mangle their ES module `import`/`export` syntax into
+broken CommonJS (`Uncaught ReferenceError: exports is not defined` in
+the browser) — the frontend JS never ran, so the app looked stuck on the
+gate screen with a dead "Enter Podium" button. Keeping static files out
+of the function's build entirely avoids that class of bug for good, and
+is the standard, faster pattern for this stack anyway (static assets
+served from Vercel's edge, no function cold-start on the way). Since
 persistence is Supabase (a real hosted Postgres database reachable over
-HTTPS), there's no serverless-filesystem caveat to work around.
+HTTPS), there's no serverless-filesystem caveat to work around either.
 
 1. **Import the repo into Vercel**: New Project → import
    `lrowan3669-a11y/Podium-` from GitHub.
@@ -311,10 +320,11 @@ HTTPS), there's no serverless-filesystem caveat to work around.
 4. **Deploy.** Local dev and the Vercel deployment point at the same
    Supabase project by default, so data created from one shows up in the
    other — normal and usually what you want for a single school's data.
-5. **Sanity check after first deploy**: open the deployed URL, sign up,
-   and confirm the frontend actually loads (styles, fonts, the gate
-   screen) rather than a blank page — that's the tell if `includeFiles`
-   ever needs adjusting for a future restructure.
+5. **Sanity check after first deploy**: open the deployed URL, tap
+   "Enter Podium", and confirm you land on a real login form. If tapping
+   it does nothing and dev tools (F12 → Console) shows a JS error
+   mentioning `exports`, the static/function split above has regressed —
+   check `vercel.json` still has the two separate `builds` entries.
 
 ## Validation
 
