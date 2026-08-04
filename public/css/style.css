@@ -31,7 +31,21 @@
   --ink: #f5f5f7;
   --ink-dim: #9a9aa5;
   --line: #2a2a33;
-  --gold: #edc44b;
+  /* Kept the name --gold for a small diff, but this is now the app's
+     lime/highlight accent (nav active state, score dots, week pill,
+     drip underlines) — not literally gold anymore. */
+  --gold: #c6ea3d;
+
+  /* Restrained UI chrome palette (buttons, nav, badges, progress rings) —
+     distinct from the five CLASS colours below, which stay tied to real
+     class identities (leaderboard tints, TV mode) and are never touched. */
+  --ui-purple: #9b5cf6;
+  --ui-purple-dim: #7c3aed;
+  --ui-teal: #29d9cb;
+  --ui-coral: #ff6b4a;
+  --paper: #f2ece0;
+  --paper-ink: #201d18;
+  --paper-ink-dim: #6b6459;
 
   --c-fury: #E24B4A;
   --c-hamilton: #1BAF7A;
@@ -67,19 +81,21 @@ html, body {
 
 body {
   background:
-    /* paint-drip clusters in the corners, like an overspray-tagged wall */
-    radial-gradient(circle 46px at 4% 6%, rgba(226, 75, 74, 0.55) 0 55%, transparent 58%),
-    radial-gradient(circle 20px at 9% 14%, rgba(226, 75, 74, 0.4) 0 55%, transparent 58%),
-    radial-gradient(circle 12px at 6% 20%, rgba(237, 196, 75, 0.35) 0 55%, transparent 58%),
-    radial-gradient(circle 60px at 97% 4%, rgba(27, 175, 122, 0.4) 0 55%, transparent 58%),
-    radial-gradient(circle 24px at 90% 12%, rgba(27, 175, 122, 0.3) 0 55%, transparent 58%),
-    radial-gradient(circle 50px at 3% 96%, rgba(74, 58, 167, 0.45) 0 55%, transparent 58%),
-    radial-gradient(circle 18px at 10% 88%, rgba(74, 58, 167, 0.3) 0 55%, transparent 58%),
-    radial-gradient(circle 55px at 96% 94%, rgba(237, 161, 0, 0.4) 0 55%, transparent 58%),
-    radial-gradient(circle 22px at 88% 84%, rgba(237, 161, 0, 0.3) 0 55%, transparent 58%),
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(226, 75, 74, 0.14), transparent 60%),
-    radial-gradient(ellipse 800px 600px at 110% 10%, rgba(27, 175, 122, 0.12), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 50% 120%, rgba(74, 58, 167, 0.14), transparent 60%),
+    /* paint-drip clusters in the corners, like an overspray-tagged wall —
+       purple / teal / lime / coral, the restrained app chrome palette,
+       not the five class colours (those stay reserved for class ID). */
+    radial-gradient(circle 46px at 4% 6%, rgba(155, 92, 246, 0.5) 0 55%, transparent 58%),
+    radial-gradient(circle 20px at 9% 14%, rgba(155, 92, 246, 0.35) 0 55%, transparent 58%),
+    radial-gradient(circle 12px at 6% 20%, rgba(198, 234, 61, 0.3) 0 55%, transparent 58%),
+    radial-gradient(circle 60px at 97% 4%, rgba(41, 217, 203, 0.4) 0 55%, transparent 58%),
+    radial-gradient(circle 24px at 90% 12%, rgba(41, 217, 203, 0.28) 0 55%, transparent 58%),
+    radial-gradient(circle 50px at 3% 96%, rgba(255, 107, 74, 0.4) 0 55%, transparent 58%),
+    radial-gradient(circle 18px at 10% 88%, rgba(255, 107, 74, 0.28) 0 55%, transparent 58%),
+    radial-gradient(circle 55px at 96% 94%, rgba(198, 234, 61, 0.35) 0 55%, transparent 58%),
+    radial-gradient(circle 22px at 88% 84%, rgba(155, 92, 246, 0.28) 0 55%, transparent 58%),
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(155, 92, 246, 0.13), transparent 60%),
+    radial-gradient(ellipse 800px 600px at 110% 10%, rgba(41, 217, 203, 0.1), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 50% 120%, rgba(255, 107, 74, 0.12), transparent 60%),
     var(--bg);
   min-height: 100vh;
 }
@@ -129,9 +145,9 @@ button {
   opacity: 0.35;
   pointer-events: none;
 }
-.cloud-1 { width: 340px; height: 260px; top: -80px; left: -100px; background: var(--c-fury); transform: rotate(-12deg); }
-.cloud-2 { width: 300px; height: 240px; bottom: -100px; right: -80px; background: var(--c-hamilton); transform: rotate(18deg); }
-.cloud-3 { width: 220px; height: 180px; top: 55%; left: 4%; background: var(--c-the_power); transform: rotate(6deg); opacity: 0.25; }
+.cloud-1 { width: 340px; height: 260px; top: -80px; left: -100px; background: var(--ui-purple); transform: rotate(-12deg); }
+.cloud-2 { width: 300px; height: 240px; bottom: -100px; right: -80px; background: var(--ui-teal); transform: rotate(18deg); }
+.cloud-3 { width: 220px; height: 180px; top: 55%; left: 4%; background: var(--ui-coral); transform: rotate(6deg); opacity: 0.25; }
 
 .tag-scribble {
   position: absolute;
@@ -142,6 +158,8 @@ button {
 }
 .scribble-1 { top: 12%; right: 12%; font-size: 3rem; transform: rotate(18deg); }
 .scribble-2 { bottom: 8%; left: 8%; font-size: 1rem; letter-spacing: 0.15em; transform: rotate(-6deg); }
+.scribble-3 { top: 20%; left: 6%; font-size: 1rem; letter-spacing: 0.1em; color: var(--ui-teal); transform: rotate(8deg); }
+.scribble-4 { bottom: 16%; right: 8%; font-size: 1rem; letter-spacing: 0.1em; color: var(--ui-coral); transform: rotate(-5deg); }
 
 .gate-inner {
   position: relative;
@@ -158,8 +176,8 @@ button {
   display: flex;
   padding: 0.6rem;
   border-radius: 55% 45% 50% 50% / 50% 50% 45% 55%;
-  background: color-mix(in srgb, var(--gold) 10%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 55%, transparent), 0 0 0 6px transparent;
+  background: color-mix(in srgb, var(--ui-purple) 12%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-purple) 55%, transparent), 0 0 0 6px transparent;
   transform: rotate(-4deg);
 }
 
@@ -189,11 +207,10 @@ button {
   margin: 0;
   letter-spacing: 0.02em;
   transform: rotate(-2deg);
-  background: linear-gradient(120deg, var(--c-fury), var(--gold) 35%, var(--c-hamilton) 65%, var(--c-the_power));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: 0 0 60px rgba(237, 196, 75, 0.25);
+  color: #f8f7f4;
+  text-shadow:
+    0 0 50px rgba(155, 92, 246, 0.35),
+    3px 4px 0 rgba(0, 0, 0, 0.4);
 }
 
 .gate-wordmark::after {
@@ -208,8 +225,19 @@ button {
   mask-repeat: repeat-x;
   -webkit-mask-size: 60px 26px;
   mask-size: 60px 26px;
-  background: linear-gradient(90deg, var(--c-fury), var(--gold), var(--c-hamilton), var(--c-the_power));
+  background: linear-gradient(90deg, var(--ui-purple), var(--ui-teal), var(--gold), var(--ui-coral));
 }
+
+.gate-tagline {
+  font-family: var(--font-display);
+  font-weight: normal;
+  font-size: clamp(0.95rem, 2.4vw, 1.3rem);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 1rem 0 0;
+}
+.gate-tagline .line-1 { color: #f8f7f4; }
+.gate-tagline .line-2 { color: var(--ui-teal); }
 
 .gate-sub {
   color: var(--ink-dim);
@@ -217,7 +245,7 @@ button {
   font-size: 1.1rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  margin: 1.2rem 0 2rem;
+  margin: 0.8rem 0 2rem;
   font-family: var(--font-marker);
   transform: rotate(-1deg);
 }
@@ -241,9 +269,10 @@ button {
 .btn:active { transform: translateY(0); }
 
 .btn-primary {
-  background: linear-gradient(120deg, var(--c-fury), var(--gold));
+  background: var(--ui-purple);
   border: none;
-  color: #16130a;
+  color: #fff;
+  border-radius: 3px 10px 4px 12px / 10px 4px 14px 3px;
 }
 
 .btn-primary::after {
@@ -259,7 +288,7 @@ button {
   mask-repeat: repeat-x;
   -webkit-mask-size: 30px 10px;
   mask-size: 30px 10px;
-  background: var(--gold);
+  background: var(--ui-purple);
   opacity: 0.85;
   pointer-events: none;
 }
@@ -291,10 +320,7 @@ button {
   letter-spacing: 0.03em;
   transform: rotate(-2deg);
   display: inline-block;
-  background: linear-gradient(120deg, var(--c-fury), var(--gold));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #f8f7f4;
 }
 
 .nav { display: flex; gap: 0.3rem; flex-wrap: wrap; flex: 1; }
@@ -377,7 +403,7 @@ button {
   margin: 0 0 1.8rem;
   letter-spacing: 0.01em;
   color: var(--ink);
-  text-shadow: 3px 3px 0 color-mix(in srgb, var(--gold) 75%, transparent);
+  text-shadow: 3px 3px 0 color-mix(in srgb, var(--ui-purple) 65%, transparent);
 }
 .screen-title::after {
   content: '';
@@ -392,7 +418,7 @@ button {
   mask-repeat: repeat-x;
   -webkit-mask-size: 46px 20px;
   mask-size: 46px 20px;
-  background: linear-gradient(90deg, var(--c-fury), var(--gold), var(--c-hamilton));
+  background: linear-gradient(90deg, var(--ui-purple), var(--gold), var(--ui-teal));
 }
 .screen-sub { color: var(--ink-dim); margin: 0.6rem 0 1.5rem; font-size: 1rem; }
 
@@ -481,39 +507,28 @@ button {
 @media (max-width: 900px) { .champion-grid { grid-template-columns: 1fr; } }
 
 .champion-card {
-  background: var(--bg-card);
-  border: 2px solid var(--line);
-  border-radius: 0.8rem;
+  background: var(--paper);
+  color: var(--paper-ink);
   padding: 2.5rem 2rem;
   text-align: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
 }
-.champion-card:nth-of-type(1) { transform: rotate(-0.7deg); }
-.champion-card:nth-of-type(2) { transform: rotate(0.7deg); }
+.champion-card:nth-of-type(1) { transform: rotate(-1.2deg); }
+.champion-card:nth-of-type(2) { transform: rotate(1.2deg); }
 .champion-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--row-colour, var(--gold)) 30%, transparent), transparent 65%);
-}
-.champion-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 26px;
-  height: 26px;
-  background: var(--bg);
-  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  background: radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--row-colour, var(--ui-purple)) 22%, transparent), transparent 65%);
 }
 .champion-label {
   font-family: var(--font-display);
   font-size: 0.85rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--ink-dim);
+  color: var(--paper-ink-dim);
   margin: 0 0 0.6rem;
   z-index: 1; position: relative;
 }
@@ -522,12 +537,12 @@ button {
   font-size: clamp(2rem, 5vw, 3.2rem);
   margin: 0 0 0.4rem;
   z-index: 1; position: relative;
-  color: var(--ink);
+  color: var(--paper-ink);
 }
 .champion-flourish {
   font-family: var(--font-marker);
   font-size: 1.3rem;
-  color: var(--gold);
+  color: var(--ui-purple-dim);
   z-index: 1; position: relative;
 }
 .champion-points {
@@ -535,8 +550,9 @@ button {
   font-size: 2.6rem;
   margin-top: 1rem;
   z-index: 1; position: relative;
+  color: var(--paper-ink);
 }
-.champion-empty { color: var(--ink-dim); font-size: 1.1rem; z-index: 1; position: relative; }
+.champion-empty { color: var(--paper-ink-dim); font-size: 1.1rem; z-index: 1; position: relative; }
 
 /* ---------- cards / forms ---------- */
 
@@ -640,13 +656,24 @@ th { color: var(--ink-dim); text-transform: uppercase; font-size: 0.72rem; lette
 .freetext-row { display: flex; gap: 0.8rem; justify-content: center; margin-top: 0.5rem; }
 .freetext-row input { width: 100%; max-width: 420px; text-align: center; font-size: 1.2rem; }
 
-.result-banner {
-  text-align: center; padding: 3rem 2rem; border-radius: 0.8rem;
-  background: var(--bg-card); border: 3px solid var(--row-colour, var(--gold));
-  box-shadow: 0 0 40px color-mix(in srgb, var(--row-colour, var(--gold)) 30%, transparent);
+/* torn-paper "achievement" card — used for celebratory moments (question
+   result, weekly champions) so they read like a sticker/note slapped on
+   the wall rather than another dark dashboard panel */
+.paper-card {
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-radius: 0.4rem;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  clip-path: polygon(0% 2%, 4% 0%, 96% 1%, 100% 3%, 99% 97%, 95% 100%, 3% 99%, 1% 95%);
 }
-.result-flourish { font-family: var(--font-marker); font-size: clamp(1.6rem, 4vw, 2.5rem); margin-bottom: 0.6rem; color: var(--row-colour, var(--gold)); }
-.result-score { font-size: 1.2rem; color: var(--ink-dim); }
+
+.result-banner {
+  text-align: center;
+  padding: 3rem 2rem;
+  transform: rotate(-1deg);
+}
+.result-flourish { font-family: var(--font-marker); font-size: clamp(1.6rem, 4vw, 2.5rem); margin-bottom: 0.6rem; color: var(--row-colour, var(--ui-purple-dim)); }
+.result-score { font-size: 1.2rem; color: var(--paper-ink-dim); font-weight: bold; }
 
 /* ---------- TV mode ---------- */
 
@@ -691,6 +718,29 @@ th { color: var(--ink-dim); text-transform: uppercase; font-size: 0.72rem; lette
   font-size: 0.85rem; cursor: pointer;
 }
 .checkbox-pill input { accent-color: var(--gold); }
+
+.role-picker { display: flex; flex-direction: column; gap: 0.7rem; }
+.role-tile {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 1rem 1.3rem;
+  border: none;
+  border-radius: 3px 12px 4px 14px / 12px 4px 16px 3px;
+  font-family: var(--font-display);
+  font-weight: normal;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.role-tile:hover { transform: translateX(2px); }
+.role-tile.active { opacity: 1; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4); }
+.role-tile[data-role='pupil'] { background: var(--ui-purple); color: #fff; }
+.role-tile[data-role='teacher'] { background: var(--gold); color: #22280a; }
+.role-tile[data-role='parent'] { background: var(--ui-teal); color: #06231f; }
 
 /* ---------- avatar ---------- */
 
@@ -738,10 +788,21 @@ th { color: var(--ink-dim); text-transform: uppercase; font-size: 0.72rem; lette
 }
 .pupil-header-main { display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
 
-.podium-stats { display: flex; gap: 1.4rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.podium-stats { display: flex; gap: 1.4rem; margin-top: 0.5rem; flex-wrap: wrap; align-items: center; }
 .podium-stat { display: flex; flex-direction: column; }
 .podium-stat-value { font-family: var(--font-numeric); font-size: 1.4rem; color: var(--gold); line-height: 1.1; }
 .podium-stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-dim); }
+
+.progress-ring { position: relative; width: 92px; height: 92px; flex-shrink: 0; }
+.progress-ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.progress-ring-track { fill: none; stroke: var(--line); stroke-width: 8; }
+.progress-ring-fill { fill: none; stroke: var(--gold); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
+.progress-ring-label {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+}
+.progress-ring-value { font-family: var(--font-numeric); font-size: 1.35rem; color: var(--ink); line-height: 1; }
+.progress-ring-caption { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-dim); margin-top: 0.2rem; max-width: 70px; }
 
 .back-link {
   display: inline-block;

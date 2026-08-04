@@ -98,7 +98,7 @@ function weeklyHtml(data) {
   return `
     <h1 class="screen-title">Weekly Winners — Week ${week}</h1>
     <div class="champion-grid">
-      <div class="champion-card" style="--row-colour:${champion ? champion.colour_hex : ''}">
+      <div class="paper-card champion-card" style="--row-colour:${champion ? champion.colour_hex : ''}">
         <p class="champion-label">Weekly Champion</p>
         ${
           champion
@@ -108,7 +108,7 @@ function weeklyHtml(data) {
             : `<p class="champion-empty">No points banked yet this week.</p>`
         }
       </div>
-      <div class="champion-card" style="--row-colour:${classChampion ? classChampion.colour_hex : ''}">
+      <div class="paper-card champion-card" style="--row-colour:${classChampion ? classChampion.colour_hex : ''}">
         <p class="champion-label">Weekly Class Champion</p>
         ${
           classChampion

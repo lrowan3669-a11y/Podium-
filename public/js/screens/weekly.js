@@ -29,7 +29,7 @@ function renderWeeklyHtml(data) {
     <p class="screen-sub">Highest points banked this week. Tie-break: fewest attempts used.</p>
 
     <div class="champion-grid">
-      <div class="champion-card" style="--row-colour:${champion ? champion.colour_hex : ''}">
+      <div class="paper-card champion-card" style="--row-colour:${champion ? champion.colour_hex : ''}">
         <p class="champion-label">Weekly Champion</p>
         ${
           champion
@@ -39,7 +39,7 @@ function renderWeeklyHtml(data) {
             : `<p class="champion-empty">No points banked yet this week.</p>`
         }
       </div>
-      <div class="champion-card" style="--row-colour:${classChampion ? classChampion.colour_hex : ''}">
+      <div class="paper-card champion-card" style="--row-colour:${classChampion ? classChampion.colour_hex : ''}">
         <p class="champion-label">Weekly Class Champion</p>
         ${
           classChampion

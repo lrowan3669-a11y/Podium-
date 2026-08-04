@@ -121,7 +121,7 @@ function runRound(container, pupil, questionSet) {
   function showResult(result) {
     container.innerHTML = `
       <div class="question-wrap">
-        <div class="result-banner" style="--row-colour:${result.class.colourHex}">
+        <div class="paper-card result-banner" style="--row-colour:${result.class.colourHex}">
           <p class="result-flourish">${escapeHtml(result.flourish)}</p>
           <p class="result-score">${result.score} / ${result.total} correct</p>
         </div>

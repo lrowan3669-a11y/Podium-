@@ -1,6 +1,6 @@
 import { api } from './api.js';
 import { escapeHtml } from './util.js';
-import { podiumMark } from './logo.js';
+import { crownMark } from './logo.js';
 
 let cached = null;
 
@@ -16,8 +16,8 @@ function applyBranding() {
     if (gateMark) gateMark.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="${alt}" class="school-logo-img school-logo-gate" />`;
     if (headerMark) headerMark.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="${alt}" class="school-logo-img school-logo-header" />`;
   } else {
-    if (gateMark) gateMark.innerHTML = podiumMark(72);
-    if (headerMark) headerMark.innerHTML = podiumMark(30);
+    if (gateMark) gateMark.innerHTML = crownMark(72);
+    if (headerMark) headerMark.innerHTML = crownMark(30);
   }
 }
 
@@ -26,8 +26,8 @@ function applyBranding() {
 export function showPlaceholderBranding() {
   const gateMark = document.getElementById('gate-mark');
   const headerMark = document.getElementById('header-mark');
-  if (gateMark) gateMark.innerHTML = podiumMark(72);
-  if (headerMark) headerMark.innerHTML = podiumMark(30);
+  if (gateMark) gateMark.innerHTML = crownMark(72);
+  if (headerMark) headerMark.innerHTML = crownMark(30);
 }
 
 export async function refreshSchoolBranding() {

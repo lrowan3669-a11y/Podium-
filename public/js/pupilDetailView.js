@@ -84,6 +84,25 @@ function wireHeaderAvatar(container, pupilId, opts, rerender) {
 
 // ---------- hub: "Your Podium" + tile grid ----------
 
+function progressRingHtml(percent, caption) {
+  const r = 42;
+  const circumference = 2 * Math.PI * r;
+  const clamped = percent === null ? 0 : Math.max(0, Math.min(100, percent));
+  const offset = circumference * (1 - clamped / 100);
+  return `
+    <div class="progress-ring">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="${r}" class="progress-ring-track" />
+        <circle cx="50" cy="50" r="${r}" class="progress-ring-fill"
+          stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" />
+      </svg>
+      <div class="progress-ring-label">
+        <span class="progress-ring-value">${percent === null ? '—' : clamped + '%'}</span>
+        <span class="progress-ring-caption">${escapeHtml(caption)}</span>
+      </div>
+    </div>`;
+}
+
 export async function renderPupilHub(container, pupilId, opts = {}) {
   const [detail, individualStandings, classStandings] = await Promise.all([
     api.getPupilDashboard(pupilId),
@@ -101,8 +120,17 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
       <span class="podium-stat-label">${escapeHtml(label)}</span>
     </div>`;
 
+  // "Overall progress" ring: average of every tracker's latest score
+  // (academic + PSD, 1-5 each) as a percentage — a real, if rough, signal
+  // rather than an invented number.
+  const allLatest = [...Object.values(latestBySkill(academicProgress)), ...Object.values(latestBySkill(psd))];
+  const ringPercent = allLatest.length
+    ? Math.round((allLatest.reduce((sum, e) => sum + e.score, 0) / (allLatest.length * 5)) * 100)
+    : null;
+
   const extra = `
     <div class="podium-stats">
+      ${progressRingHtml(ringPercent, 'Overall Progress')}
       ${podiumStatHtml('Season Points', pupil.season_points)}
       ${podiumStatHtml('Individual Rank', myRank ? `#${myRank.rank}` : '—')}
       ${podiumStatHtml(`${pupil.class_name} Rank`, myClassRank ? `#${myClassRank.rank}` : '—')}

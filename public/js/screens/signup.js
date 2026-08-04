@@ -13,12 +13,12 @@ export async function renderSignup(container) {
         <div id="signup-success" class="auth-success hidden"></div>
         <form id="signup-form">
           <div class="field">
-            <label for="su-role">I am a…</label>
-            <select id="su-role">
-              <option value="pupil">Pupil</option>
-              <option value="teacher">Teacher / Staff</option>
-              <option value="parent">Parent / Carer</option>
-            </select>
+            <label>I am a…</label>
+            <div class="role-picker" id="role-picker">
+              <button type="button" class="role-tile active" data-role="pupil">I'm a Pupil</button>
+              <button type="button" class="role-tile" data-role="teacher">I'm Staff</button>
+              <button type="button" class="role-tile" data-role="parent">I'm a Parent</button>
+            </div>
           </div>
           <div class="field">
             <label for="su-name">Full name</label>
@@ -67,17 +67,24 @@ export async function renderSignup(container) {
     </div>
   `;
 
-  const roleSelect = container.querySelector('#su-role');
+  const rolePicker = container.querySelector('#role-picker');
+  const roleTiles = Array.from(rolePicker.querySelectorAll('.role-tile'));
+  let selectedRole = 'pupil';
   const hintBlocks = {
     pupil: container.querySelector('#su-hint-pupil'),
     teacher: container.querySelector('#su-hint-teacher'),
     parent: container.querySelector('#su-hint-parent'),
   };
   function syncHintVisibility() {
-    const role = roleSelect.value;
-    Object.entries(hintBlocks).forEach(([r, el]) => el.classList.toggle('hidden', r !== role));
+    Object.entries(hintBlocks).forEach(([r, el]) => el.classList.toggle('hidden', r !== selectedRole));
   }
-  roleSelect.addEventListener('change', syncHintVisibility);
+  roleTiles.forEach((tile) => {
+    tile.addEventListener('click', () => {
+      selectedRole = tile.dataset.role;
+      roleTiles.forEach((t) => t.classList.toggle('active', t === tile));
+      syncHintVisibility();
+    });
+  });
   syncHintVisibility();
 
   const form = container.querySelector('#signup-form');
@@ -89,7 +96,7 @@ export async function renderSignup(container) {
     errorBox.classList.add('hidden');
     successBox.classList.add('hidden');
 
-    const role = roleSelect.value;
+    const role = selectedRole;
     const full_name = container.querySelector('#su-name').value.trim();
     const email = container.querySelector('#su-email').value.trim();
     const password = container.querySelector('#su-password').value;
