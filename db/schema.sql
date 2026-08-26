@@ -246,3 +246,116 @@ alter table school_settings enable row level security;
 insert into storage.buckets (id, name, public)
 values ('school-assets', 'school-assets', true)
 on conflict (id) do nothing;
+
+
+-- ============================================================================
+-- Phase 4: staff-created classes, pupil directory/claiming, parent invite
+-- links, attendance, qualifications, feedback, and messaging.
+-- Safe to re-run alongside everything above.
+-- ============================================================================
+
+-- Classes used to be a fixed, pre-seeded roster of five F1/boxing/darts-
+-- themed "crews". They're now created ad hoc by staff (name + photo), so
+-- the old sport-identity columns are no longer guaranteed — made nullable
+-- rather than dropped, so the five original seeded rows (and their
+-- existing award/leaderboard history) keep working untouched.
+alter table classes alter column namesake drop not null;
+alter table classes alter column sport_theme drop not null;
+alter table classes alter column unit_label drop not null;
+alter table classes alter column award_flourish drop not null;
+alter table classes add column if not exists photo_path text;
+alter table classes add column if not exists created_by uuid references profiles(id);
+
+-- A pupil with no class yet sits in the cross-school directory, visible to
+-- every teacher, until a teacher claims them into one of their own classes
+-- (see routes/directory.js) — at which point normal class-scoped visibility
+-- (lib/authorization.js) takes over and only that class's teacher(s) + admin
+-- can see them.
+alter table pupils alter column class_id drop not null;
+comment on column pupils.class_id is 'null = unclaimed, listed in the staff directory until a teacher claims this pupil into one of their classes';
+
+-- A pupil's own "about me" — self-authored, shown on their profile.
+alter table pupils add column if not exists likes jsonb;
+alter table pupils add column if not exists dislikes jsonb;
+alter table pupils add column if not exists favourite_subjects jsonb;
+
+-- Morning/afternoon attendance mark, one row per pupil per session per day.
+create table if not exists attendance_entries (
+  id bigint generated always as identity primary key,
+  pupil_id bigint not null references pupils(id) on delete cascade,
+  entry_date date not null,
+  session text not null check (session in ('am', 'pm')),
+  status text not null check (status in ('present', 'late', 'authorised_absent', 'unauthorised_absent')),
+  recorded_by uuid references profiles(id),
+  recorded_at timestamptz not null default now(),
+  unique (pupil_id, entry_date, session)
+);
+create index if not exists idx_attendance_pupil on attendance_entries(pupil_id);
+
+-- Qualifications a pupil is working towards, with a staff-recorded percent
+-- complete. One row per qualification per pupil, updated in place.
+create table if not exists qualifications (
+  id bigint generated always as identity primary key,
+  pupil_id bigint not null references pupils(id) on delete cascade,
+  title text not null,
+  percent int not null check (percent between 0 and 100),
+  recorded_by uuid references profiles(id),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_qualifications_pupil on qualifications(pupil_id);
+
+-- Free-text feedback a teacher leaves on a pupil's work/profile — visible to
+-- the pupil themselves, their linked parent(s), the pupil's class teacher(s),
+-- and admin (same visibility rule as every other pupil-scoped tracker).
+create table if not exists feedback_entries (
+  id bigint generated always as identity primary key,
+  pupil_id bigint not null references pupils(id) on delete cascade,
+  author_id uuid not null references profiles(id),
+  body text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_feedback_pupil on feedback_entries(pupil_id);
+
+-- Direct messages between two accounts. Allowed pairs (teacher<->pupil,
+-- parent<->teacher) are enforced in routes/messages.js, not here — this
+-- table just stores whatever the route already validated.
+create table if not exists messages (
+  id bigint generated always as identity primary key,
+  sender_id uuid not null references profiles(id) on delete cascade,
+  recipient_id uuid not null references profiles(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now(),
+  read_at timestamptz
+);
+create index if not exists idx_messages_sender on messages(sender_id, created_at);
+create index if not exists idx_messages_recipient on messages(recipient_id, created_at);
+
+-- One-time shareable links a teacher/admin generates for a specific pupil,
+-- so a parent can be sent the link (by whatever channel the school already
+-- uses — email, text, WhatsApp) and land on a signup form that's already
+-- locked to that child. Only a hash of the token is stored, same principle
+-- as sessions.token_hash.
+create table if not exists pupil_invites (
+  id bigint generated always as identity primary key,
+  pupil_id bigint not null references pupils(id) on delete cascade,
+  token_hash text not null unique,
+  created_by uuid not null references profiles(id),
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  used_by uuid references profiles(id)
+);
+create index if not exists idx_pupil_invites_token_hash on pupil_invites(token_hash);
+
+alter table attendance_entries enable row level security;
+alter table qualifications enable row level security;
+alter table feedback_entries enable row level security;
+alter table messages enable row level security;
+alter table pupil_invites enable row level security;
+
+-- Public bucket for class photos — shown throughout the app (standings,
+-- class badges) to every signed-in account regardless of role, same
+-- reasoning as school-assets.
+insert into storage.buckets (id, name, public)
+values ('class-assets', 'class-assets', true)
+on conflict (id) do nothing;

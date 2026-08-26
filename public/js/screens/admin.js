@@ -236,30 +236,60 @@ async function renderAwardTab(body) {
   });
 }
 
-// ---------- classes overview ----------
+// ---------- classes ----------
 
 async function renderClassesTab(body) {
   const classes = await api.getClasses();
   body.innerHTML = `
-    <div class="card">
-      <h3>Classes (fixed roster of five)</h3>
-      <table>
-        <thead><tr><th>Class</th><th>Namesake</th><th>Sport</th><th>1 point =</th><th>Colour</th></tr></thead>
-        <tbody>
-          ${classes
-            .map(
-              (c) => `
-            <tr>
-              <td><span class="class-badge" style="--row-colour:${c.colourHex}"><span class="class-dot"></span>${escapeHtml(c.name)}</span></td>
-              <td>${escapeHtml(c.namesake)}</td>
-              <td>${escapeHtml(c.sportTheme)}</td>
-              <td>${escapeHtml(c.unitLabel)}</td>
-              <td>${c.colourHex}</td>
-            </tr>`
-            )
-            .join('')}
-        </tbody>
-      </table>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Create a class</h3>
+        <div class="field">
+          <label for="new-class-name">Name</label>
+          <input id="new-class-name" type="text" placeholder="e.g. Year 10 Falcons" />
+        </div>
+        <div class="field">
+          <label for="new-class-photo">Class photo (optional)</label>
+          <input id="new-class-photo" type="file" accept="image/jpeg,image/png,image/webp" />
+        </div>
+        <button id="add-class-btn" class="btn btn-primary">Create Class</button>
+      </div>
+      <div class="card">
+        <h3>Classes (${classes.length})</h3>
+        <table>
+          <thead><tr><th>Class</th><th>Colour</th></tr></thead>
+          <tbody>
+            ${classes
+              .map(
+                (c) => `
+              <tr>
+                <td>
+                  <span class="class-badge" style="--row-colour:${c.colourHex}">
+                    ${c.photoUrl ? `<img src="${c.photoUrl}" alt="" class="class-thumb" />` : '<span class="class-dot"></span>'}
+                    ${escapeHtml(c.name)}
+                  </span>
+                </td>
+                <td>${c.colourHex}</td>
+              </tr>`
+              )
+              .join('') || `<tr><td colspan="2" class="muted">No classes yet — create the first one.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
+
+  body.querySelector('#add-class-btn').addEventListener('click', async () => {
+    const name = body.querySelector('#new-class-name').value.trim();
+    if (!name) return toast('Enter a class name first');
+    const photoFile = body.querySelector('#new-class-photo').files[0];
+    try {
+      const created = await api.createClass({ name });
+      if (photoFile) await api.uploadClassPhoto(created.id, photoFile);
+      toast(`${name} created`);
+      renderClassesTab(body);
+    } catch (e) {
+      toast(e.message);
+    }
+  });
 }

@@ -31,8 +31,8 @@ async function pupilSummary(pupilId) {
     id: pupil.id,
     name: pupil.name,
     class_id: pupil.class_id,
-    class_name: pupil.classes.name,
-    colour_hex: pupil.classes.colour_hex,
+    class_name: pupil.classes ? pupil.classes.name : null,
+    colour_hex: pupil.classes ? pupil.classes.colour_hex : null,
     season_points: awards.reduce((sum, a) => sum + a.points, 0),
     profile_id: linkedProfile ? linkedProfile.id : null,
   };

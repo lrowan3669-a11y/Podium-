@@ -17,6 +17,7 @@ import { renderDashboard } from './screens/dashboard.js';
 import { renderPupilPage } from './screens/pupilPage.js';
 import { renderApprovals } from './screens/approvals.js';
 import { renderSchoolSetup } from './screens/schoolSetup.js';
+import { renderDirectory } from './screens/directory.js';
 
 showPlaceholderBranding();
 refreshSchoolBranding();
@@ -33,6 +34,7 @@ const APP_ROUTES = {
   tv: renderTv,
   approvals: renderApprovals,
   school: renderSchoolSetup,
+  directory: renderDirectory,
 };
 
 // route key -> { label, roles } — roles omitted means every approved role sees it
@@ -43,6 +45,7 @@ const NAV_ITEMS = [
   { route: 'play', label: 'Question Mode', roles: ['teacher', 'admin'] },
   { route: 'tv', label: 'TV Mode', roles: ['teacher', 'admin'] },
   { route: 'admin', label: 'Teacher Admin', roles: ['teacher', 'admin'] },
+  { route: 'directory', label: 'Directory', roles: ['teacher', 'admin'] },
   { route: 'approvals', label: 'Approvals', roles: ['admin'] },
   { route: 'school', label: 'School Setup', roles: ['admin'] },
 ];

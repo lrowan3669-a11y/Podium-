@@ -3,13 +3,16 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const supabase = require('./db/db');
 const { attachProfile, requireApproved, requireRole } = require('./middleware/auth');
+const { accessibleClassIds } = require('./lib/authorization');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const dashboardRoutes = require('./routes/dashboard');
 const trackerRoutes = require('./routes/trackers');
 const avatarRoutes = require('./routes/avatar');
 const schoolRoutes = require('./routes/school');
-const { ensureAvatarBucket, ensureSchoolAssetsBucket } = require('./lib/storage');
+const classesRoutes = require('./routes/classes');
+const directoryRoutes = require('./routes/directory');
+const { ensureAvatarBucket, ensureSchoolAssetsBucket, ensureClassAssetsBucket } = require('./lib/storage');
 
 const app = express();
 app.use(express.json());
@@ -23,6 +26,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/trackers', trackerRoutes);
 app.use('/api/avatar', avatarRoutes);
 app.use('/api/school', schoolRoutes);
+app.use('/api/classes', classesRoutes);
+app.use('/api/directory', directoryRoutes);
 
 // ---------- helpers ----------
 
@@ -63,25 +68,22 @@ function classRow(c) {
 }
 
 function flourishFor(classRowObj, points) {
-  return classRowObj.award_flourish.replace('{points}', String(points));
+  const template = classRowObj.award_flourish || '+{points} points!';
+  return template.replace('{points}', String(points));
 }
-
-// ---------- classes ----------
-
-// public: non-sensitive reference data, and the signup form needs it
-// before an account exists to be "approved"
-app.get('/api/classes', route(async (req, res) => {
-  const rows = must(await supabase.from('classes').select('*').order('name'));
-  res.json(rows.map(classRow));
-}));
 
 // ---------- pupils (staff-only: full roster + season points) ----------
 
 app.get('/api/pupils', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
   const week = await getCurrentWeek();
-  const pupils = must(
-    await supabase.from('pupils').select('id, name, class_id, active, classes(name, colour_hex)').order('name')
-  );
+  let query = supabase.from('pupils').select('id, name, class_id, active, classes(name, colour_hex)').order('name');
+  // A teacher only manages their own class(es) — unclaimed pupils (no class
+  // yet) live in the Directory instead. Admin sees the full roster.
+  if (req.profile.role === 'teacher') {
+    const classIds = await accessibleClassIds(req.profile);
+    query = classIds.length ? query.in('class_id', classIds) : null;
+  }
+  const pupils = query ? must(await query) : [];
   const awards = must(await supabase.from('awards').select('pupil_id, points, week'));
 
   const rows = pupils.map((p) => {
@@ -91,8 +93,8 @@ app.get('/api/pupils', requireApproved, requireRole('teacher', 'admin'), route(a
       name: p.name,
       class_id: p.class_id,
       active: p.active,
-      class_name: p.classes.name,
-      colour_hex: p.classes.colour_hex,
+      class_name: p.classes ? p.classes.name : 'Unclaimed',
+      colour_hex: p.classes ? p.classes.colour_hex : '#2a2a33',
       season_points: mine.reduce((sum, a) => sum + a.points, 0),
       weekly_points: mine.filter((a) => a.week === week).reduce((sum, a) => sum + a.points, 0),
     };
@@ -290,7 +292,11 @@ app.post('/api/awards', requireApproved, requireRole('teacher', 'admin'), route(
 
 app.get('/api/standings/individual', requireApproved, route(async (req, res) => {
   const pupils = must(
-    await supabase.from('pupils').select('id, name, class_id, classes(name, colour_hex)').eq('active', true)
+    await supabase
+      .from('pupils')
+      .select('id, name, class_id, classes(name, colour_hex)')
+      .eq('active', true)
+      .not('class_id', 'is', null) // unclaimed pupils aren't part of a championship yet
   );
   const awards = must(await supabase.from('awards').select('pupil_id, points'));
 
@@ -339,7 +345,11 @@ app.get('/api/standings/weekly', requireApproved, route(async (req, res) => {
   const week = await getCurrentWeek();
 
   const pupils = must(
-    await supabase.from('pupils').select('id, name, class_id, classes(name, colour_hex)').eq('active', true)
+    await supabase
+      .from('pupils')
+      .select('id, name, class_id, classes(name, colour_hex)')
+      .eq('active', true)
+      .not('class_id', 'is', null)
   );
   const awards = must(await supabase.from('awards').select('pupil_id, points').eq('week', week));
   const attempts = must(await supabase.from('attempts').select('pupil_id').eq('week', week));
@@ -391,6 +401,7 @@ app.use((req, res, next) => {
 // require.main branch below, so this can't be gated behind it.
 ensureAvatarBucket().catch((err) => console.warn('avatar bucket check failed:', err.message));
 ensureSchoolAssetsBucket().catch((err) => console.warn('school-assets bucket check failed:', err.message));
+ensureClassAssetsBucket().catch((err) => console.warn('class-assets bucket check failed:', err.message));
 
 const PORT = process.env.PORT || 3000;
 if (require.main === module) {

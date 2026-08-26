@@ -541,6 +541,14 @@ button {
   background: var(--row-colour);
 }
 
+.class-thumb {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--row-colour);
+}
+
 /* ---------- weekly / celebratory ---------- */
 
 .champion-grid {

@@ -62,10 +62,16 @@ export const api = {
 
   // ---- classes / pupils (staff) ----
   getClasses: () => request('/classes'),
+  createClass: (data) => request('/classes', { method: 'POST', body: JSON.stringify(data) }),
+  uploadClassPhoto: (classId, file) => upload(`/classes/${classId}/photo`, file, 'photo'),
   getPupils: () => request('/pupils'),
   createPupil: (data) => request('/pupils', { method: 'POST', body: JSON.stringify(data) }),
   updatePupil: (id, data) => request(`/pupils/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePupil: (id) => request(`/pupils/${id}`, { method: 'DELETE' }),
+
+  // ---- directory (unclaimed pupils) ----
+  getDirectory: () => request('/directory'),
+  claimPupil: (pupilId, classId) => request(`/directory/claim/${pupilId}`, { method: 'POST', body: JSON.stringify({ class_id: classId }) }),
 
   getQuestionSets: () => request('/question-sets'),
   getQuestionSet: (id) => request(`/question-sets/${id}`),

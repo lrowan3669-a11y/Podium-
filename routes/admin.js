@@ -45,11 +45,13 @@ router.post('/approve/:profileId', route(async (req, res) => {
     let pupilId = req.body.pupil_id;
     if (!pupilId) {
       const { new_pupil_name, class_id } = req.body || {};
-      if (!new_pupil_name || !class_id) {
-        return res.status(400).json({ error: 'pupil_id, or new_pupil_name + class_id, is required' });
+      if (!new_pupil_name) {
+        return res.status(400).json({ error: 'pupil_id, or new_pupil_name (optionally with class_id), is required' });
       }
+      // class_id is optional: with none, the pupil lands unclaimed in the
+      // staff directory until a teacher claims them into a class.
       const created = must(
-        await supabase.from('pupils').insert({ name: new_pupil_name.trim(), class_id }).select('id').single()
+        await supabase.from('pupils').insert({ name: new_pupil_name.trim(), class_id: class_id || null }).select('id').single()
       );
       pupilId = created.id;
     }
