@@ -28,13 +28,26 @@ function classRows(classes) {
     <div class="row rank-${c.rank}" style="--row-colour:${c.colour_hex}">
       <div class="row-rank">${c.rank}</div>
       <div class="row-main">
-        <div class="row-name">${escapeHtml(c.name)}</div>
-        <div class="row-meta">${escapeHtml(c.namesake)} · ${c.pupil_count} pupil${c.pupil_count === 1 ? '' : 's'} · 1pt = ${escapeHtml(c.unit_label)}</div>
+        <div class="row-name">${c.photo_url ? `<img src="${c.photo_url}" alt="" class="class-thumb" />` : ''}${escapeHtml(c.name)}</div>
+        <div class="row-meta">${c.namesake ? escapeHtml(c.namesake) + ' · ' : ''}${c.pupil_count} pupil${c.pupil_count === 1 ? '' : 's'}${c.unit_label ? ` · 1pt = ${escapeHtml(c.unit_label)}` : ''}</div>
       </div>
       <div class="row-points">${c.average.toFixed(1)}<small>avg/pupil</small></div>
     </div>`
     )
     .join('');
+}
+
+// Reuses the season-long standings data already fetched for the board below
+// — "of the year" isn't a separate tally, it's just this season's #1, given
+// a celebratory frame instead of just being row one of a table.
+function yearChampionHtml(label, leader, pointsText) {
+  if (!leader || (leader.points !== undefined ? leader.points <= 0 : leader.total_points <= 0)) return '';
+  return `
+    <div class="paper-card champion-card year-champion" style="--row-colour:${leader.colour_hex}">
+      <p class="champion-label">${escapeHtml(label)}</p>
+      <p class="champion-name">${escapeHtml(leader.name)}</p>
+      <p class="champion-points">${pointsText(leader)}</p>
+    </div>`;
 }
 
 const TABS = {
@@ -60,6 +73,7 @@ export async function renderIndividual(container, params) {
         <button type="button" class="tab-btn ${tab === 'individual' ? 'active' : ''}" data-tab="individual">Individual</button>
         <button type="button" class="tab-btn ${tab === 'classes' ? 'active' : ''}" data-tab="classes">Constructors'</button>
       </div>
+      <div id="standings-champion"></div>
       <div class="board" id="standings-board"><div class="empty-state">Loading…</div></div>
     `;
     container.querySelectorAll('#standings-tabs .tab-btn').forEach((btn) => {
@@ -70,12 +84,15 @@ export async function renderIndividual(container, params) {
       });
     });
 
+    const championEl = container.querySelector('#standings-champion');
     const boardEl = container.querySelector('#standings-board');
     if (tab === 'individual') {
       const pupils = await api.getIndividualStandings();
+      championEl.innerHTML = yearChampionHtml('Student of the Year', pupils[0], (p) => `${p.points} pts`);
       boardEl.innerHTML = individualRows(pupils);
     } else {
       const classes = await api.getClassStandings();
+      championEl.innerHTML = yearChampionHtml('Class of the Year', classes[0], (c) => `${c.average.toFixed(1)} avg/pupil`);
       boardEl.innerHTML = classRows(classes);
     }
   }

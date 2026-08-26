@@ -47,6 +47,7 @@ export const api = {
   // ---- dashboard ----
   getMyDashboard: () => request('/dashboard/me'),
   getPupilDashboard: (pupilId) => request(`/dashboard/pupil/${pupilId}`),
+  updateAboutMe: (pupilId, data) => request(`/dashboard/pupil/${pupilId}/about`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // ---- trackers ----
   getAcademicProgress: (pupilId) => request(`/trackers/academic/${pupilId}`),

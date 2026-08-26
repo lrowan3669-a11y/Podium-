@@ -23,6 +23,7 @@ export async function renderPupilPage(container, params) {
     canUploadAvatar: (profile && profile.role === 'admin') || isSelf,
     canRecordTrackers: isStaff,
     canInviteParent: isStaff,
+    canEditAbout: (profile && profile.role === 'admin') || isSelf,
   };
 
   if (!section) return renderPupilHub(container, pupilId, opts);

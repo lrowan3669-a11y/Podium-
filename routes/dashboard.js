@@ -2,6 +2,12 @@ const express = require('express');
 const supabase = require('../db/db');
 const { requireApproved } = require('../middleware/auth');
 const { canAccessPupil, accessibleClassIds } = require('../lib/authorization');
+const { CLASS_ASSETS_BUCKET } = require('../lib/storage');
+
+function classPhotoUrl(photoPath) {
+  if (!photoPath) return null;
+  return supabase.storage.from(CLASS_ASSETS_BUCKET).getPublicUrl(photoPath).data.publicUrl;
+}
 
 const router = express.Router();
 router.use(requireApproved);
@@ -23,7 +29,7 @@ function must({ data, error }) {
 }
 
 async function pupilSummary(pupilId) {
-  const pupil = must(await supabase.from('pupils').select('*, classes(name, colour_hex)').eq('id', pupilId).maybeSingle());
+  const pupil = must(await supabase.from('pupils').select('*, classes(name, colour_hex, photo_path)').eq('id', pupilId).maybeSingle());
   if (!pupil) return null;
   const awards = must(await supabase.from('awards').select('points').eq('pupil_id', pupilId));
   const linkedProfile = must(await supabase.from('profiles').select('id').eq('pupil_id', pupilId).maybeSingle());
@@ -33,8 +39,12 @@ async function pupilSummary(pupilId) {
     class_id: pupil.class_id,
     class_name: pupil.classes ? pupil.classes.name : null,
     colour_hex: pupil.classes ? pupil.classes.colour_hex : null,
+    class_photo_url: pupil.classes ? classPhotoUrl(pupil.classes.photo_path) : null,
     season_points: awards.reduce((sum, a) => sum + a.points, 0),
     profile_id: linkedProfile ? linkedProfile.id : null,
+    likes: pupil.likes || [],
+    dislikes: pupil.dislikes || [],
+    favourite_subjects: pupil.favourite_subjects || [],
   };
 }
 
@@ -115,6 +125,29 @@ router.get('/pupil/:pupilId', route(async (req, res) => {
     qualificationsCount,
     feedbackCount,
   });
+}));
+
+// A pupil's own "about me" — self-authored, so only the pupil themselves or
+// an admin (helping out) can set it, unlike every other tracker here which
+// is staff-recorded about a pupil rather than by them.
+function cleanList(input) {
+  if (!Array.isArray(input)) return [];
+  return input.map((s) => String(s).trim()).filter(Boolean).slice(0, 5);
+}
+
+router.put('/pupil/:pupilId/about', route(async (req, res) => {
+  const pupilId = req.params.pupilId;
+  const isSelf = req.profile.role === 'pupil' && String(req.profile.pupil_id) === String(pupilId);
+  if (!isSelf && req.profile.role !== 'admin') return res.status(403).json({ error: 'only the pupil themselves (or an admin) can edit this' });
+
+  const { likes, dislikes, favourite_subjects } = req.body || {};
+  must(
+    await supabase
+      .from('pupils')
+      .update({ likes: cleanList(likes), dislikes: cleanList(dislikes), favourite_subjects: cleanList(favourite_subjects) })
+      .eq('id', pupilId)
+  );
+  res.json({ ok: true });
 }));
 
 module.exports = router;

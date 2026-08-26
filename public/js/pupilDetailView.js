@@ -48,13 +48,17 @@ function latestBySkill(entries) {
 }
 
 function pupilHeaderHtml(pupil, opts, extra) {
+  const rowColour = pupil.colour_hex || '#2a2a33';
   return `
-    <div class="pupil-header card" style="--row-colour:${pupil.colour_hex}">
+    <div class="pupil-header card" style="--row-colour:${rowColour}">
       <div class="pupil-header-main">
         ${pupil.profile_id ? avatarHtml(pupil.profile_id, pupil.name, 88) : `<span class="avatar avatar-fallback" style="--avatar-size:88px">${escapeHtml(pupil.name[0] || '?')}</span>`}
         <div>
           <h1 class="screen-title" style="margin-bottom:0.3rem">${escapeHtml(pupil.name)}</h1>
-          <span class="class-badge" style="--row-colour:${pupil.colour_hex}"><span class="class-dot"></span>${escapeHtml(pupil.class_name)}</span>
+          <span class="class-badge" style="--row-colour:${rowColour}">
+            ${pupil.class_photo_url ? `<img src="${pupil.class_photo_url}" alt="" class="class-thumb" />` : `<span class="class-dot"></span>`}
+            ${pupil.class_name ? escapeHtml(pupil.class_name) : 'Unclaimed — not yet in a class'}
+          </span>
           ${extra || ''}
         </div>
       </div>
@@ -176,7 +180,7 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
       ${progressRingHtml(ringPercent, 'Overall Progress')}
       ${podiumStatHtml('Season Points', pupil.season_points)}
       ${podiumStatHtml('Individual Rank', myRank ? `#${myRank.rank}` : '—')}
-      ${podiumStatHtml(`${pupil.class_name} Rank`, myClassRank ? `#${myClassRank.rank}` : '—')}
+      ${podiumStatHtml(pupil.class_name ? `${pupil.class_name} Rank` : 'Class Rank', myClassRank ? `#${myClassRank.rank}` : '—')}
     </div>`;
 
   const counts = {
@@ -189,6 +193,7 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
 
   container.innerHTML = `
     ${pupilHeaderHtml(pupil, opts, extra)}
+    ${aboutMeHtml(pupil, opts)}
     <h3 class="coming-soon-title">Podium Trackers</h3>
     <div class="tile-grid">
       ${TILES.map((t) => tileHtml(pupilId, t, counts)).join('')}
@@ -197,6 +202,75 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
 
   wireHeaderAvatar(container, pupilId, opts, () => renderPupilHub(container, pupilId, opts));
   wireInviteButton(container, pupilId, opts);
+  wireAboutMe(container, pupilId, pupil, opts, () => renderPupilHub(container, pupilId, opts));
+}
+
+// ---------- about me (likes / dislikes / favourite subjects) ----------
+
+function aboutMeHtml(pupil, opts) {
+  const hasAny = pupil.likes.length || pupil.dislikes.length || pupil.favourite_subjects.length;
+  if (!opts.canEditAbout && !hasAny) return '';
+
+  const pillList = (items) => (items.length ? items.map((s) => `<span class="pill">${escapeHtml(s)}</span>`).join('') : `<span class="muted">Nothing added yet</span>`);
+
+  return `
+    <div class="card about-me">
+      <div class="about-me-view">
+        <div class="about-me-row"><h4>Things I like</h4><div class="pill-list">${pillList(pupil.likes)}</div></div>
+        <div class="about-me-row"><h4>Things I don't like</h4><div class="pill-list">${pillList(pupil.dislikes)}</div></div>
+        <div class="about-me-row"><h4>Favourite subjects</h4><div class="pill-list">${pillList(pupil.favourite_subjects)}</div></div>
+        ${opts.canEditAbout ? `<button id="about-me-edit-btn" class="btn">Edit</button>` : ''}
+      </div>
+      ${opts.canEditAbout ? aboutMeFormHtml(pupil) : ''}
+    </div>`;
+}
+
+function aboutMeFormHtml(pupil) {
+  return `
+    <form id="about-me-form" class="tracker-form hidden">
+      <div class="field">
+        <label for="about-likes">Things I like (up to 5, comma-separated)</label>
+        <input id="about-likes" type="text" value="${escapeHtml(pupil.likes.join(', '))}" />
+      </div>
+      <div class="field">
+        <label for="about-dislikes">Things I don't like (up to 5, comma-separated)</label>
+        <input id="about-dislikes" type="text" value="${escapeHtml(pupil.dislikes.join(', '))}" />
+      </div>
+      <div class="field">
+        <label for="about-subjects">Favourite subjects (up to 5, comma-separated)</label>
+        <input id="about-subjects" type="text" value="${escapeHtml(pupil.favourite_subjects.join(', '))}" />
+      </div>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>`;
+}
+
+function wireAboutMe(container, pupilId, pupil, opts, rerender) {
+  if (!opts.canEditAbout) return;
+  const editBtn = container.querySelector('#about-me-edit-btn');
+  const form = container.querySelector('#about-me-form');
+  const view = container.querySelector('.about-me-view');
+  if (!editBtn || !form) return;
+
+  editBtn.addEventListener('click', () => {
+    view.classList.add('hidden');
+    form.classList.remove('hidden');
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const splitList = (id) => form.querySelector(id).value.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 5);
+    try {
+      await api.updateAboutMe(pupilId, {
+        likes: splitList('#about-likes'),
+        dislikes: splitList('#about-dislikes'),
+        favourite_subjects: splitList('#about-subjects'),
+      });
+      toast('Saved');
+      rerender();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
 }
 
 const TILE_COUNT_KEYS = {

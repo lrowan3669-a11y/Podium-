@@ -14,7 +14,7 @@ const classesRoutes = require('./routes/classes');
 const directoryRoutes = require('./routes/directory');
 const invitesRoutes = require('./routes/invites');
 const messagesRoutes = require('./routes/messages');
-const { ensureAvatarBucket, ensureSchoolAssetsBucket, ensureClassAssetsBucket } = require('./lib/storage');
+const { ensureAvatarBucket, ensureSchoolAssetsBucket, ensureClassAssetsBucket, CLASS_ASSETS_BUCKET } = require('./lib/storage');
 
 const app = express();
 app.use(express.json());
@@ -74,6 +74,11 @@ function classRow(c) {
 function flourishFor(classRowObj, points) {
   const template = classRowObj.award_flourish || '+{points} points!';
   return template.replace('{points}', String(points));
+}
+
+function classPhotoUrl(photoPath) {
+  if (!photoPath) return null;
+  return supabase.storage.from(CLASS_ASSETS_BUCKET).getPublicUrl(photoPath).data.publicUrl;
 }
 
 // ---------- pupils (staff-only: full roster + season points) ----------
@@ -332,6 +337,7 @@ async function classStandingsRows(weekFilter) {
       const totalPoints = awards.filter((a) => a.class_id === c.id).reduce((sum, a) => sum + a.points, 0);
       return {
         ...c,
+        photo_url: classPhotoUrl(c.photo_path),
         total_points: totalPoints,
         pupil_count: pupilCount,
         average: pupilCount > 0 ? Math.round((totalPoints / pupilCount) * 10) / 10 : 0,

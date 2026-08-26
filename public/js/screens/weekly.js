@@ -44,7 +44,7 @@ function renderWeeklyHtml(data) {
         ${
           classChampion
             ? `<p class="champion-name">${escapeHtml(classChampion.name)}</p>
-               <p class="champion-flourish">${escapeHtml(classChampion.namesake)}</p>
+               ${classChampion.namesake ? `<p class="champion-flourish">${escapeHtml(classChampion.namesake)}</p>` : ''}
                <p class="champion-points">${classChampion.average.toFixed(1)} avg/pupil</p>`
             : `<p class="champion-empty">No points banked yet this week.</p>`
         }
