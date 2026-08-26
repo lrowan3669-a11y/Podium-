@@ -13,6 +13,7 @@ const schoolRoutes = require('./routes/school');
 const classesRoutes = require('./routes/classes');
 const directoryRoutes = require('./routes/directory');
 const invitesRoutes = require('./routes/invites');
+const messagesRoutes = require('./routes/messages');
 const { ensureAvatarBucket, ensureSchoolAssetsBucket, ensureClassAssetsBucket } = require('./lib/storage');
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/api/school', schoolRoutes);
 app.use('/api/classes', classesRoutes);
 app.use('/api/directory', directoryRoutes);
 app.use('/api', invitesRoutes);
+app.use('/api/messages', messagesRoutes);
 
 // ---------- helpers ----------
 

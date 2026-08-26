@@ -19,6 +19,7 @@ import { renderApprovals } from './screens/approvals.js';
 import { renderSchoolSetup } from './screens/schoolSetup.js';
 import { renderDirectory } from './screens/directory.js';
 import { renderInvite } from './screens/invite.js';
+import { renderMessages } from './screens/messages.js';
 
 showPlaceholderBranding();
 refreshSchoolBranding();
@@ -36,6 +37,7 @@ const APP_ROUTES = {
   approvals: renderApprovals,
   school: renderSchoolSetup,
   directory: renderDirectory,
+  messages: renderMessages,
 };
 
 // route key -> { label, roles } — roles omitted means every approved role sees it
@@ -43,6 +45,7 @@ const NAV_ITEMS = [
   { route: 'dashboard', label: 'Dashboard' },
   { route: 'individual', label: 'Standings' },
   { route: 'weekly', label: 'Weekly' },
+  { route: 'messages', label: 'Messages' },
   { route: 'play', label: 'Question Mode', roles: ['teacher', 'admin'] },
   { route: 'tv', label: 'TV Mode', roles: ['teacher', 'admin'] },
   { route: 'admin', label: 'Teacher Admin', roles: ['teacher', 'admin'] },
@@ -59,20 +62,22 @@ const BOTTOM_NAV_ITEMS = {
     { route: 'dashboard', label: 'Hub' },
     { route: 'individual', label: 'Board' },
     { route: 'weekly', label: 'Weekly' },
+    { route: 'messages', label: 'Messages' },
   ],
   parent: [
     { route: 'dashboard', label: 'Home' },
     { route: 'individual', label: 'Board' },
+    { route: 'messages', label: 'Messages' },
   ],
   teacher: [
     { route: 'admin', label: 'Admin' },
     { route: 'individual', label: 'Board' },
-    { route: 'weekly', label: 'Weekly' },
+    { route: 'messages', label: 'Messages' },
   ],
   admin: [
     { route: 'admin', label: 'Admin' },
     { route: 'individual', label: 'Board' },
-    { route: 'weekly', label: 'Weekly' },
+    { route: 'messages', label: 'Messages' },
   ],
 };
 

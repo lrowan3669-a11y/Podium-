@@ -101,4 +101,10 @@ export const api = {
 
   getWeek: () => request('/meta/week'),
   advanceWeek: () => request('/meta/week/advance', { method: 'POST' }),
+
+  // ---- messaging ----
+  getMessageContacts: () => request('/messages/contacts'),
+  getInbox: () => request('/messages/inbox'),
+  getThread: (otherId) => request(`/messages/thread/${otherId}`),
+  sendMessage: (otherId, body) => request(`/messages/thread/${otherId}`, { method: 'POST', body: JSON.stringify({ body }) }),
 };
