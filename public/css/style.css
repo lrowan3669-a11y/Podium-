@@ -388,6 +388,50 @@ button {
   .user-badge-name { display: none; }
 }
 
+/* ---------- bottom tab bar (phone) ----------
+   A short, role-scoped subset of the full nav for quick thumb access.
+   The full nav stays reachable via the topbar hamburger at every width. */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  background: rgba(19, 19, 24, 0.9);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-top: 2px solid var(--line);
+}
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 0.2rem 1rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  background: transparent;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.bottom-nav-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 55% 45% 50% 50% / 45% 55% 45% 55%;
+  background: var(--line);
+}
+.bottom-nav-item.active { color: var(--gold); background: var(--bg-raised); }
+.bottom-nav-item.active .bottom-nav-dot { background: var(--gold); }
+
+@media (max-width: 860px) {
+  .bottom-nav { display: flex; }
+  .app:has(.bottom-nav:not(.hidden)) .screen { padding-bottom: 5rem; }
+}
+
 .screen { flex: 1; padding: 2rem; max-width: 1400px; width: 100%; margin: 0 auto; }
 @media (max-width: 640px) {
   .screen { padding: 1.2rem; }

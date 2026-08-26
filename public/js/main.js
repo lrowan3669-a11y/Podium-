@@ -38,8 +38,7 @@ const APP_ROUTES = {
 // route key -> { label, roles } — roles omitted means every approved role sees it
 const NAV_ITEMS = [
   { route: 'dashboard', label: 'Dashboard' },
-  { route: 'individual', label: 'Individual' },
-  { route: 'classes', label: 'Constructors' },
+  { route: 'individual', label: 'Standings' },
   { route: 'weekly', label: 'Weekly' },
   { route: 'play', label: 'Question Mode', roles: ['teacher', 'admin'] },
   { route: 'tv', label: 'TV Mode', roles: ['teacher', 'admin'] },
@@ -48,10 +47,36 @@ const NAV_ITEMS = [
   { route: 'school', label: 'School Setup', roles: ['admin'] },
 ];
 
+// Phone-only bottom tab bar — a short, role-scoped subset of NAV_ITEMS for
+// quick thumb access. The full list stays reachable via the topbar's
+// hamburger sheet, which remains present at every width.
+const BOTTOM_NAV_ITEMS = {
+  pupil: [
+    { route: 'dashboard', label: 'Hub' },
+    { route: 'individual', label: 'Board' },
+    { route: 'weekly', label: 'Weekly' },
+  ],
+  parent: [
+    { route: 'dashboard', label: 'Home' },
+    { route: 'individual', label: 'Board' },
+  ],
+  teacher: [
+    { route: 'admin', label: 'Admin' },
+    { route: 'individual', label: 'Board' },
+    { route: 'weekly', label: 'Weekly' },
+  ],
+  admin: [
+    { route: 'admin', label: 'Admin' },
+    { route: 'individual', label: 'Board' },
+    { route: 'weekly', label: 'Weekly' },
+  ],
+};
+
 const screenEl = document.getElementById('screen');
 const navEl = document.getElementById('nav-links');
 const userBadgeEl = document.getElementById('user-badge');
 const navToggleEl = document.getElementById('nav-toggle');
+const bottomNavEl = document.getElementById('bottom-nav');
 let currentCleanup = null;
 let weekPillTimer = null;
 
@@ -59,6 +84,18 @@ function renderNav(profile) {
   navEl.innerHTML = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(profile.role))
     .map((item) => `<a href="#/${item.route}" data-route="${item.route}">${escapeHtml(item.label)}</a>`)
     .join('');
+
+  const bottomItems = BOTTOM_NAV_ITEMS[profile.role] || [];
+  bottomNavEl.innerHTML = bottomItems
+    .map(
+      (item) => `
+    <a href="#/${item.route}" data-route="${item.route}" class="bottom-nav-item">
+      <span class="bottom-nav-dot" aria-hidden="true"></span>
+      ${escapeHtml(item.label)}
+    </a>`
+    )
+    .join('');
+  bottomNavEl.classList.remove('hidden');
 
   userBadgeEl.innerHTML = `
     ${avatarHtml(profile.id, profile.full_name, 32)}
@@ -81,6 +118,8 @@ function clearNav() {
   navEl.innerHTML = '';
   userBadgeEl.classList.add('hidden');
   navToggleEl.classList.add('hidden');
+  bottomNavEl.innerHTML = '';
+  bottomNavEl.classList.add('hidden');
   if (weekPillTimer) {
     clearInterval(weekPillTimer);
     weekPillTimer = null;
@@ -146,6 +185,7 @@ export async function router() {
   }
 
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('active', a.dataset.route === route));
+  document.querySelectorAll('.bottom-nav-item').forEach((a) => a.classList.toggle('active', a.dataset.route === route));
 
   const navItem = NAV_ITEMS.find((i) => i.route === route);
   if (navItem && navItem.roles && !navItem.roles.includes(profile.role)) {
