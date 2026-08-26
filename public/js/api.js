@@ -88,6 +88,8 @@ export const api = {
   claimInvite: (token, data) => request(`/invite/${token}`, { method: 'POST', body: JSON.stringify(data) }),
 
   getQuestionSets: () => request('/question-sets'),
+  getAiStatus: () => request('/question-sets/ai-status'),
+  generateQuestions: (data) => request('/question-sets/generate', { method: 'POST', body: JSON.stringify(data) }),
   getQuestionSet: (id) => request(`/question-sets/${id}`),
   getQuestionSetToPlay: (id) => request(`/question-sets/${id}/play`),
   createQuestionSet: (data) => request('/question-sets', { method: 'POST', body: JSON.stringify(data) }),

@@ -108,13 +108,17 @@ async function renderPupilsTab(body) {
 // ---------- question sets ----------
 
 async function renderQuestionsTab(body) {
-  const sets = await api.getQuestionSets();
+  const [sets, aiStatus] = await Promise.all([api.getQuestionSets(), api.getAiStatus().catch(() => ({ configured: false }))]);
+
+  // Draft state for the "New question set" card — a plain array of
+  // {question_text, answer_text, options}, edited in place and re-rendered
+  // locally (not a full tab refetch) on Add/Generate/Remove.
+  let draft = [{ question_text: '', answer_text: '', options: null }, { question_text: '', answer_text: '', options: null }, { question_text: '', answer_text: '', options: null }];
+  let draftTerm = '';
+  let draftSubject = '';
 
   body.innerHTML = `
-    <div class="card">
-      <h3>New question set</h3>
-      ${questionFormHtml()}
-    </div>
+    <div class="card" id="new-set-card"></div>
     <div class="card">
       <h3>Existing sets (${sets.length})</h3>
       <div class="table-scroll">
@@ -138,7 +142,118 @@ async function renderQuestionsTab(body) {
     </div>
   `;
 
-  wireQuestionForm(body);
+  const newSetCard = body.querySelector('#new-set-card');
+
+  function paintNewSetCard() {
+    newSetCard.innerHTML = `
+      <h3>New question set</h3>
+      ${aiWizardHtml(aiStatus.configured)}
+      <div class="row-flex">
+        <div class="field"><label>Term</label><input id="qs-term" type="text" placeholder="e.g. Autumn 1" value="${escapeHtml(draftTerm)}" /></div>
+        <div class="field"><label>Subject</label><input id="qs-subject" type="text" placeholder="e.g. Maths" value="${escapeHtml(draftSubject)}" /></div>
+      </div>
+      ${draft
+        .map(
+          (q, i) => `
+        <div class="card" style="background:var(--bg-raised)">
+          <div class="field">
+            <label>Question ${i + 1}</label>
+            <input type="text" data-q-text="${i}" placeholder="Question text" value="${escapeHtml(q.question_text)}" />
+          </div>
+          <div class="row-flex">
+            <div class="field">
+              <label>Correct answer</label>
+              <input type="text" data-q-answer="${i}" placeholder="Exact answer" value="${escapeHtml(q.answer_text)}" />
+            </div>
+            <div class="field">
+              <label>Options (optional, comma-separated incl. the answer)</label>
+              <input type="text" data-q-options="${i}" placeholder="e.g. Paris, London, Rome, Berlin" value="${escapeHtml((q.options || []).join(', '))}" />
+            </div>
+          </div>
+          ${draft.length > 3 ? `<button type="button" class="btn" data-remove-block="${i}">Remove</button>` : ''}
+        </div>`
+        )
+        .join('')}
+      <div class="row-flex" style="margin-top:0.5rem">
+        <button type="button" id="add-block-btn" class="btn">+ Add question</button>
+        <button type="button" id="save-set-btn" class="btn btn-primary">Save Question Set</button>
+      </div>
+    `;
+    wireNewSetCard();
+  }
+
+  function syncDraftFromInputs() {
+    draftTerm = newSetCard.querySelector('#qs-term').value;
+    draftSubject = newSetCard.querySelector('#qs-subject').value;
+    draft = draft.map((_, i) => ({
+      question_text: newSetCard.querySelector(`[data-q-text="${i}"]`).value,
+      answer_text: newSetCard.querySelector(`[data-q-answer="${i}"]`).value,
+      options: (() => {
+        const raw = newSetCard.querySelector(`[data-q-options="${i}"]`).value.trim();
+        return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : null;
+      })(),
+    }));
+  }
+
+  function wireNewSetCard() {
+    newSetCard.querySelector('#add-block-btn').addEventListener('click', () => {
+      syncDraftFromInputs();
+      draft.push({ question_text: '', answer_text: '', options: null });
+      paintNewSetCard();
+    });
+
+    newSetCard.querySelectorAll('[data-remove-block]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        syncDraftFromInputs();
+        draft.splice(Number(btn.dataset.removeBlock), 1);
+        paintNewSetCard();
+      });
+    });
+
+    const genBtn = newSetCard.querySelector('#ai-generate-btn');
+    if (genBtn) {
+      genBtn.addEventListener('click', async () => {
+        const subject = newSetCard.querySelector('#ai-subject').value.trim();
+        if (!subject) return toast('Enter a subject for the AI to write questions about');
+        const topic = newSetCard.querySelector('#ai-topic').value.trim();
+        const level = newSetCard.querySelector('#ai-level').value.trim();
+        const senFriendly = newSetCard.querySelector('#ai-sen').checked;
+        const count = Number(newSetCard.querySelector('#ai-count').value) || 3;
+        genBtn.disabled = true;
+        genBtn.textContent = 'Generating…';
+        try {
+          const { questions } = await api.generateQuestions({ subject, topic, level, senFriendly, count });
+          draftSubject = subject;
+          draft = questions;
+          paintNewSetCard();
+          toast('Draft questions ready — check them over before saving');
+        } catch (e) {
+          toast(e.message);
+          genBtn.disabled = false;
+          genBtn.textContent = 'Generate Questions';
+        }
+      });
+    }
+
+    newSetCard.querySelector('#save-set-btn').addEventListener('click', async () => {
+      syncDraftFromInputs();
+      const term = draftTerm.trim();
+      const subject = draftSubject.trim();
+      const questions = draft.map((q) => ({ question_text: q.question_text.trim(), answer_text: q.answer_text.trim(), options: q.options }));
+      if (!term || !subject || questions.length < 3 || questions.some((q) => !q.question_text || !q.answer_text)) {
+        return toast('Fill in term, subject, and at least 3 questions + answers');
+      }
+      try {
+        await api.createQuestionSet({ term, subject, questions });
+        toast('Question set saved');
+        renderQuestionsTab(body);
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+  }
+
+  paintNewSetCard();
 
   body.querySelectorAll('[data-delete-set]').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -149,61 +264,38 @@ async function renderQuestionsTab(body) {
   });
 }
 
-function questionFormHtml() {
-  const blocks = [0, 1, 2]
-    .map(
-      (i) => `
+function aiWizardHtml(configured) {
+  if (!configured) {
+    return `
+      <div class="card" style="background:var(--bg-raised)">
+        <h4 style="margin-top:0">Generate with AI</h4>
+        <p class="muted">Not set up yet — add <code>ANTHROPIC_API_KEY</code> to this deployment's environment variables to turn this on. Until then, write question sets by hand below.</p>
+      </div>`;
+  }
+  return `
     <div class="card" style="background:var(--bg-raised)">
-      <div class="field">
-        <label>Question ${i + 1}</label>
-        <input type="text" data-q-text="${i}" placeholder="Question text" />
+      <h4 style="margin-top:0">Generate with AI</h4>
+      <p class="muted">Useful for SEN pupils — describe the level and it'll write in plain, unambiguous language.</p>
+      <div class="row-flex">
+        <div class="field"><label>Subject</label><input id="ai-subject" type="text" placeholder="e.g. Maths" /></div>
+        <div class="field"><label>Topic (optional)</label><input id="ai-topic" type="text" placeholder="e.g. Adding to 20" /></div>
       </div>
       <div class="row-flex">
-        <div class="field">
-          <label>Correct answer</label>
-          <input type="text" data-q-answer="${i}" placeholder="Exact answer" />
-        </div>
-        <div class="field">
-          <label>Options (optional, comma-separated incl. the answer)</label>
-          <input type="text" data-q-options="${i}" placeholder="e.g. Paris, London, Rome, Berlin" />
+        <div class="field"><label>Pupil level (optional)</label><input id="ai-level" type="text" placeholder="e.g. Year 7, working below age-related expectations" /></div>
+        <div class="field"><label>How many questions</label>
+          <select id="ai-count">
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
         </div>
       </div>
-    </div>`
-    )
-    .join('');
-
-  return `
-    <div class="row-flex">
-      <div class="field"><label>Term</label><input id="qs-term" type="text" placeholder="e.g. Autumn 1" /></div>
-      <div class="field"><label>Subject</label><input id="qs-subject" type="text" placeholder="e.g. Maths" /></div>
-    </div>
-    ${blocks}
-    <button id="save-set-btn" class="btn btn-primary">Save Question Set</button>
-  `;
-}
-
-function wireQuestionForm(body) {
-  body.querySelector('#save-set-btn').addEventListener('click', async () => {
-    const term = body.querySelector('#qs-term').value.trim();
-    const subject = body.querySelector('#qs-subject').value.trim();
-    const questions = [0, 1, 2].map((i) => {
-      const question_text = body.querySelector(`[data-q-text="${i}"]`).value.trim();
-      const answer_text = body.querySelector(`[data-q-answer="${i}"]`).value.trim();
-      const optionsRaw = body.querySelector(`[data-q-options="${i}"]`).value.trim();
-      const options = optionsRaw ? optionsRaw.split(',').map((s) => s.trim()).filter(Boolean) : null;
-      return { question_text, answer_text, options };
-    });
-    if (!term || !subject || questions.some((q) => !q.question_text || !q.answer_text)) {
-      return toast('Fill in term, subject, and all 3 questions + answers');
-    }
-    try {
-      await api.createQuestionSet({ term, subject, questions });
-      toast('Question set saved');
-      renderQuestionsTab(body);
-    } catch (e) {
-      toast(e.message);
-    }
-  });
+      <label class="checkbox-pill" style="margin-bottom:1rem">
+        <input type="checkbox" id="ai-sen" /> SEN-friendly (simpler language, shorter sentences)
+      </label>
+      <button type="button" id="ai-generate-btn" class="btn btn-primary">Generate Questions</button>
+    </div>`;
 }
 
 // ---------- manual award ----------

@@ -15,6 +15,7 @@ const directoryRoutes = require('./routes/directory');
 const invitesRoutes = require('./routes/invites');
 const messagesRoutes = require('./routes/messages');
 const { ensureAvatarBucket, ensureSchoolAssetsBucket, ensureClassAssetsBucket, CLASS_ASSETS_BUCKET } = require('./lib/storage');
+const { generateQuestions: generateAiQuestions, isConfigured: isAiConfigured } = require('./lib/aiQuestions');
 
 const app = express();
 app.use(express.json());
@@ -160,6 +161,24 @@ app.get('/api/question-sets', requireApproved, requireRole('teacher', 'admin'), 
     question_count: questions.filter((q) => q.question_set_id === s.id).length,
   }));
   res.json(rows);
+}));
+
+// Registered before the /:id routes below — otherwise Express would match
+// "ai-status" and "generate" as an :id value and this code would never run.
+app.get('/api/question-sets/ai-status', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
+  res.json({ configured: isAiConfigured() });
+}));
+
+app.post('/api/question-sets/generate', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
+  const { subject, topic, level, senFriendly, count } = req.body || {};
+  if (!subject || !subject.trim()) return res.status(400).json({ error: 'subject is required' });
+  const n = Number.isInteger(count) && count >= 3 && count <= 8 ? count : 3;
+  try {
+    const questions = await generateAiQuestions({ subject: subject.trim(), topic: (topic || '').trim(), level: (level || '').trim(), senFriendly: !!senFriendly, count: n });
+    res.json({ questions });
+  } catch (err) {
+    res.status(err.notConfigured ? 501 : 502).json({ error: err.message });
+  }
 }));
 
 app.get('/api/question-sets/:id', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
