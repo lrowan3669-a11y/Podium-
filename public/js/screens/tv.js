@@ -52,7 +52,7 @@ function tvFrame(inner, activeIndex) {
 
 function individualHtml(pupils) {
   return `
-    <h1 class="screen-title">Individual Standings</h1>
+    <h1 class="screen-title">Student Leaderboard</h1>
     <div class="board">
       ${pupils
         .slice(0, 12)
@@ -74,7 +74,7 @@ function individualHtml(pupils) {
 
 function classesHtml(classes) {
   return `
-    <h1 class="screen-title">Constructors' Board</h1>
+    <h1 class="screen-title">Class Leaderboard</h1>
     <div class="board">
       ${classes
         .map(
@@ -83,7 +83,7 @@ function classesHtml(classes) {
           <div class="row-rank">${c.rank}</div>
           <div class="row-main">
             <div class="row-name">${escapeHtml(c.name)}</div>
-            <div class="row-meta">${escapeHtml(c.namesake)}</div>
+            ${c.namesake ? `<div class="row-meta">${escapeHtml(c.namesake)}</div>` : ''}
           </div>
           <div class="row-points">${c.average.toFixed(1)}<small>avg/pupil</small></div>
         </div>`
@@ -99,7 +99,7 @@ function weeklyHtml(data) {
     <h1 class="screen-title">Weekly Winners — Week ${week}</h1>
     <div class="champion-grid">
       <div class="paper-card champion-card" style="--row-colour:${champion ? champion.colour_hex : ''}">
-        <p class="champion-label">Weekly Champion</p>
+        <p class="champion-label">Student of the Week</p>
         ${
           champion
             ? `<p class="champion-name">${escapeHtml(champion.name)}</p>
@@ -109,7 +109,7 @@ function weeklyHtml(data) {
         }
       </div>
       <div class="paper-card champion-card" style="--row-colour:${classChampion ? classChampion.colour_hex : ''}">
-        <p class="champion-label">Weekly Class Champion</p>
+        <p class="champion-label">Class of the Week</p>
         ${
           classChampion
             ? `<p class="champion-name">${escapeHtml(classChampion.name)}</p>

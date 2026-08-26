@@ -52,11 +52,11 @@ function yearChampionHtml(label, leader, pointsText) {
 
 const TABS = {
   individual: {
-    title: 'Individual Standings',
-    sub: 'Season-long championship — never resets.',
+    title: 'Student Leaderboard',
+    sub: 'Season-long — never resets. This season\'s #1 is Student of the Year.',
   },
   classes: {
-    title: "Constructors' Board",
+    title: 'Class Leaderboard',
     sub: 'Class score = average points per pupil, so a small class can still fight for the title.',
   },
 };
@@ -70,8 +70,8 @@ export async function renderIndividual(container, params) {
       <h1 class="screen-title">${copy.title}</h1>
       <p class="screen-sub">${copy.sub}</p>
       <div class="tabs" id="standings-tabs">
-        <button type="button" class="tab-btn ${tab === 'individual' ? 'active' : ''}" data-tab="individual">Individual</button>
-        <button type="button" class="tab-btn ${tab === 'classes' ? 'active' : ''}" data-tab="classes">Constructors'</button>
+        <button type="button" class="tab-btn ${tab === 'individual' ? 'active' : ''}" data-tab="individual">Students</button>
+        <button type="button" class="tab-btn ${tab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
       </div>
       <div id="standings-champion"></div>
       <div class="board" id="standings-board"><div class="empty-state">Loading…</div></div>

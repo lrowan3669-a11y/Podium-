@@ -30,7 +30,7 @@ function renderWeeklyHtml(data) {
 
     <div class="champion-grid">
       <div class="paper-card champion-card" style="--row-colour:${champion ? champion.colour_hex : ''}">
-        <p class="champion-label">Weekly Champion</p>
+        <p class="champion-label">Student of the Week</p>
         ${
           champion
             ? `<p class="champion-name">${escapeHtml(champion.name)}</p>
@@ -40,7 +40,7 @@ function renderWeeklyHtml(data) {
         }
       </div>
       <div class="paper-card champion-card" style="--row-colour:${classChampion ? classChampion.colour_hex : ''}">
-        <p class="champion-label">Weekly Class Champion</p>
+        <p class="champion-label">Class of the Week</p>
         ${
           classChampion
             ? `<p class="champion-name">${escapeHtml(classChampion.name)}</p>
