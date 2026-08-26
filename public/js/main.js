@@ -20,6 +20,7 @@ import { renderSchoolSetup } from './screens/schoolSetup.js';
 import { renderDirectory } from './screens/directory.js';
 import { renderInvite } from './screens/invite.js';
 import { renderMessages } from './screens/messages.js';
+import { renderProfile } from './screens/profile.js';
 
 showPlaceholderBranding();
 refreshSchoolBranding();
@@ -38,6 +39,7 @@ const APP_ROUTES = {
   school: renderSchoolSetup,
   directory: renderDirectory,
   messages: renderMessages,
+  profile: renderProfile,
 };
 
 // route key -> { label, roles } — roles omitted means every approved role sees it
@@ -107,8 +109,10 @@ function renderNav(profile) {
   bottomNavEl.classList.remove('hidden');
 
   userBadgeEl.innerHTML = `
-    ${avatarHtml(profile.id, profile.full_name, 32)}
-    <span class="user-badge-name">${escapeHtml(profile.full_name)}</span>
+    <a href="#/profile" class="user-badge-link">
+      ${avatarHtml(profile.id, profile.full_name, 32)}
+      <span class="user-badge-name">${escapeHtml(profile.full_name)}</span>
+    </a>
     <button id="logout-btn" class="btn user-badge-logout">Sign out</button>
   `;
   userBadgeEl.classList.remove('hidden');

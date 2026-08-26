@@ -351,6 +351,8 @@ button {
 }
 
 .user-badge { display: flex; align-items: center; gap: 0.6rem; }
+.user-badge-link { display: flex; align-items: center; gap: 0.6rem; color: inherit; }
+.user-badge-link:hover { color: var(--gold); }
 .user-badge-name { font-size: 0.85rem; font-weight: bold; white-space: nowrap; }
 .user-badge-logout { padding: 0.4rem 0.8rem; font-size: 0.7rem; }
 
