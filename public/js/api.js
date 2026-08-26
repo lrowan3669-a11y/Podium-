@@ -73,6 +73,11 @@ export const api = {
   getDirectory: () => request('/directory'),
   claimPupil: (pupilId, classId) => request(`/directory/claim/${pupilId}`, { method: 'POST', body: JSON.stringify({ class_id: classId }) }),
 
+  // ---- parent invite links ----
+  createInvite: (pupilId) => request(`/invites/${pupilId}`, { method: 'POST' }),
+  getInvite: (token) => request(`/invite/${token}`),
+  claimInvite: (token, data) => request(`/invite/${token}`, { method: 'POST', body: JSON.stringify(data) }),
+
   getQuestionSets: () => request('/question-sets'),
   getQuestionSet: (id) => request(`/question-sets/${id}`),
   getQuestionSetToPlay: (id) => request(`/question-sets/${id}/play`),

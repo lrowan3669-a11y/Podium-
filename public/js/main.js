@@ -18,11 +18,12 @@ import { renderPupilPage } from './screens/pupilPage.js';
 import { renderApprovals } from './screens/approvals.js';
 import { renderSchoolSetup } from './screens/schoolSetup.js';
 import { renderDirectory } from './screens/directory.js';
+import { renderInvite } from './screens/invite.js';
 
 showPlaceholderBranding();
 refreshSchoolBranding();
 
-const PUBLIC_ROUTES = { login: renderLogin, signup: renderSignup };
+const PUBLIC_ROUTES = { login: renderLogin, signup: renderSignup, invite: renderInvite };
 const APP_ROUTES = {
   dashboard: renderDashboard,
   pupil: renderPupilPage,

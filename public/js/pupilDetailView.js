@@ -61,7 +61,48 @@ function pupilHeaderHtml(pupil, opts, extra) {
           <label class="btn" for="avatar-file">Change photo</label>
           <input id="avatar-file" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
         </div>` : ''}
+      ${opts.canInviteParent ? `
+        <div class="invite-parent">
+          <button id="invite-parent-btn" class="btn">Invite a parent</button>
+          <div id="invite-parent-link" class="invite-link-box hidden">
+            <input type="text" readonly />
+            <button type="button" class="btn" id="invite-parent-copy">Copy</button>
+          </div>
+        </div>` : ''}
     </div>`;
+}
+
+function wireInviteButton(container, pupilId, opts) {
+  if (!opts.canInviteParent) return;
+  const btn = container.querySelector('#invite-parent-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    try {
+      const { token } = await api.createInvite(pupilId);
+      const url = `${location.origin}/#/invite/${token}`;
+      const box = container.querySelector('#invite-parent-link');
+      const input = box.querySelector('input');
+      input.value = url;
+      box.classList.remove('hidden');
+      input.select();
+      toast('Invite link ready — copy it and send it to the parent yourself (email, text, WhatsApp).');
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+  const copyBtn = container.querySelector('#invite-parent-copy');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const input = container.querySelector('#invite-parent-link input');
+      try {
+        await navigator.clipboard.writeText(input.value);
+        toast('Copied');
+      } catch (err) {
+        input.select();
+        toast('Select and copy the link manually');
+      }
+    });
+  }
 }
 
 function wireHeaderAvatar(container, pupilId, opts, rerender) {
@@ -148,6 +189,7 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
   `;
 
   wireHeaderAvatar(container, pupilId, opts, () => renderPupilHub(container, pupilId, opts));
+  wireInviteButton(container, pupilId, opts);
 }
 
 function tileHtml(pupilId, tile, counts) {

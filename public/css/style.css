@@ -817,6 +817,13 @@ th { color: var(--ink-dim); text-transform: uppercase; font-size: 0.72rem; lette
 .avatar-upload { display: flex; align-items: center; }
 .avatar-upload label.btn { cursor: pointer; }
 
+.invite-parent { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+.invite-link-box { display: flex; gap: 0.4rem; align-items: center; }
+.invite-link-box input {
+  background: var(--bg-raised); border: 1px solid var(--line); color: var(--ink-dim);
+  padding: 0.5rem 0.7rem; border-radius: 0.4rem; font-size: 0.75rem; width: 15rem;
+}
+
 /* ---------- pupil cards / dashboards ---------- */
 
 .pupil-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
