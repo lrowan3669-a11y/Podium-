@@ -69,18 +69,19 @@ public/                Static frontend (vanilla HTML/CSS/JS, ES modules)
 ### Screens
 
 - `#/login`, `#/signup` — account creation and sign-in. Every signup starts `pending` until an admin approves it (unless the email is in `ADMIN_BOOTSTRAP_EMAILS` — see below).
+- `#/invite/:token` — a parent's landing page, reached only via a one-time link a teacher/admin generated for a specific pupil and sent themselves (email/text/WhatsApp — the app doesn't send email). Creates an already-approved, already-linked parent account and signs them straight in. Nothing in the normal nav points here.
 - `#/pending` — holding screen for an approved-but-not-yet-linked or still-pending account.
 - `#/dashboard` — role-shaped landing page: a pupil lands on their own Podium hub (see below); a teacher/parent sees a card grid of their pupils/children; an admin sees stats + a link to approvals.
-- `#/pupil/:id` — a pupil's **Podium hub**: header (avatar, class, season points, individual rank, class rank) + a tile grid, one tile per tracked domain. Reachable by the pupil themselves, or anyone with access to that pupil (see **Access model** below).
-- `#/pupil/:id/academic`, `#/pupil/:id/psd` — full drill-down for the two built tracker domains (skill/category grid + an entry form for staff).
-- `#/pupil/:id/<sporting|enterprise|attendance|strengths|enhancements>` — "coming soon" drill-down for the remaining brief domains, so every tile goes somewhere rather than being a dead click.
+- `#/pupil/:id` — a pupil's **Podium hub**: header (avatar, class + photo, season points, individual rank, class rank), an "about me" card (things they like/dislike, favourite subjects — pupil-editable), and a tile grid, one tile per tracked domain. Reachable by the pupil themselves, or anyone with access to that pupil (see **Access model** below).
+- `#/pupil/:id/<academic|psd|attendance|qualifications|feedback>` — full drill-down for each built tracker domain. `#/pupil/:id/<sporting|enterprise|strengths|enhancements>` are still "coming soon" placeholders.
+- `#/directory` — teacher/admin: pupils not yet claimed into any class, visible to every member of staff until claimed.
 - `#/approvals` — admin only: the pending-signups queue, with the linking UI (pupil/class picker) that actually grants access.
 - `#/school` — admin only: set the school name and upload a logo (see **School setup** below).
-- `#/individual` — season-long individual leaderboard, rows tinted by class colour.
-- `#/classes` — the Constructors' Board (five classes, average per pupil).
+- `#/individual` — the Standings screen: a tab bar between the season-long Individual leaderboard and the Constructors' Board (classes, average per pupil), each topped with a "Student/Class of the Year" celebration card for the current #1. (`#/classes` still works and just opens the Constructors' tab.)
 - `#/weekly` — Weekly Champion + Weekly Class Champion, plus the week-advance control.
+- `#/messages` — direct messaging: teacher↔pupil and parent↔teacher only (never pupil↔pupil), restricted to an actual class link; admin can message anyone.
 - `#/play` — teacher-driven question mode: pick a pupil, pick a question set, 3 questions, instant feedback, themed award flourish + sound cue.
-- `#/admin` — teacher admin: pupils, question sets, manual point awards, class reference.
+- `#/admin` — teacher admin: pupils, question sets, manual point awards (with a reason), and class creation (name + optional photo).
 - `#/tv` — read-only, auto-rotating (individual → classes → weekly) for the classroom TV.
 
 ## Accounts, roles & approvals
@@ -92,10 +93,21 @@ until an admin approves it from `#/approvals` and links it to a real
 record:
 
 - **Pupil** signup → admin either links it to an existing pupil (added
-  earlier via Teacher Admin) or creates a new pupil record on the spot.
+  earlier via Teacher Admin) or creates a new pupil record on the spot —
+  or approves it with **no class at all**, which lands the pupil in the
+  cross-school **Directory** (`#/directory`) instead. Any teacher/admin can
+  then claim them into a class, at which point normal class-scoped
+  visibility applies and they drop out of the directory.
 - **Teacher** signup → admin ticks which class(es) they're linked to.
-- **Parent** signup → admin links them to their child/children's pupil
-  record(s) (by pupil ID for now — there's no name-search picker yet).
+  Teachers can also create their own classes directly from `#/admin`
+  (name + optional photo) — this auto-links the creating teacher, no
+  approval step needed for the class itself.
+- **Parent**: not a normal signup. A teacher/admin generates a one-time
+  link for a specific pupil from that pupil's hub ("Invite a parent") and
+  sends it themselves — there's deliberately no email-sending in this app.
+  Following the link creates an already-approved, already-linked parent
+  account. A parent can still self-signup the old way (naming their child
+  at `#/signup`) if you'd rather admins approve+link manually instead.
 
 ### Access model
 
@@ -108,6 +120,10 @@ that touches pupil data:
 | `teacher` | Only pupils in class(es) they're linked to |
 | `parent` | Only their explicitly linked child/children |
 | `pupil` | Only their own record |
+
+One deliberate exception: **unclaimed pupils** (no class yet) are visible
+to every teacher/admin in the Directory, specifically so any of them can
+claim one — normal class-scoped visibility only starts once they have.
 
 ### The first admin (bootstrap)
 
@@ -176,6 +192,16 @@ teacher advances it from the Weekly screen, which is exactly what resets
 "of the week" awards (season totals are untouched, since they sum every
 week).
 
+`classes` started as a fixed, pre-seeded roster of five sport-themed
+"crews" (Fury/Hamilton/Charlton/Sweet Science/The Power) — staff now
+create their own instead (name + optional photo, `photo_path` +
+`created_by`). The five original seeded rows and their award-flourish
+commentary still work untouched; `namesake`/`sport_theme`/`unit_label`/
+`award_flourish` are nullable so a new class doesn't need any of that.
+`pupils.class_id` is nullable too — `null` means "unclaimed", visible in
+the staff Directory (`routes/directory.js`) until a teacher claims the
+pupil into one of their own classes.
+
 Recording a question-mode attempt needs two inserts (the attempt itself,
 then the award it earns) to either both land or neither does, so that's
 done via a small Postgres function, `record_attempt(...)`, defined in
@@ -192,16 +218,28 @@ model** above).
 **Tracked domains**: `academic_progress` (subject_area/skill/score 1-5 —
 English: reading/writing/speaking/listening, Maths:
 adding/subtracting/multiplication/division, Other:
-science/history/geography/creative_arts) and `psd_entries` (category/score
-1-5 — the six PSD categories from the brief). Both are staff-write,
-family-read: any teacher/admin with access to the pupil can add an entry,
-and the pupil/their parent/any linked teacher can view the history. The
-remaining domains from the brief (Sporting, Business & Enterprise,
-Attendance Tracker, Strengths Profile/Clifton Strengths, Educational
-Enhancements) show as "coming soon" tiles on the pupil hub, each with
-its own drill-down route — the same `subject_area/skill/score` shape in
-`academic_progress` (or a sibling table following the same pattern) is
-the natural next step for each one.
+science/history/geography/creative_arts), `psd_entries` (category/score
+1-5 — the six PSD categories from the brief), `attendance_entries`
+(one status per pupil/day/session — am/pm), `qualifications`
+(title + percent-complete, updated in place as it changes), and
+`feedback_entries` (free-text notes a teacher leaves on a pupil's work).
+All five are staff-write, family-read: any teacher/admin with access to
+the pupil can add an entry, and the pupil/their parent/any linked teacher
+can view the history. Sporting, Business & Enterprise, Strengths Profile/
+Clifton Strengths, and Educational Enhancements are still "coming soon"
+tiles on the pupil hub — the same shape as the tables above is the
+natural next step for each one.
+
+**Messaging**: `messages` (sender/recipient/body/read_at) — restricted at
+the route layer (`lib/authorization.js`'s `canMessage`) to teacher↔pupil
+and parent↔teacher within an actual class link, never pupil↔pupil; admin
+can message anyone. `pupil_invites` stores only a hash of each parent
+invite token (same principle as `sessions.token_hash`), one-time and
+expiring.
+
+**Pupil "about me"**: `pupils.likes` / `dislikes` / `favourite_subjects`
+(jsonb string arrays, capped at 5 each) — self-authored by the pupil (or
+set by an admin on their behalf), shown as pill chips on the pupil hub.
 
 **School settings**: `school_settings` — a single-row table (name +
 logo path) for the one-time school setup described below.
