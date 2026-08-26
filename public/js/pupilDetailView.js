@@ -208,7 +208,7 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
 // ---------- about me (likes / dislikes / favourite subjects) ----------
 
 function aboutMeHtml(pupil, opts) {
-  const hasAny = pupil.likes.length || pupil.dislikes.length || pupil.favourite_subjects.length;
+  const hasAny = pupil.likes.length || pupil.dislikes.length || pupil.favourite_subjects.length || pupil.bio || pupil.fun_fact;
   if (!opts.canEditAbout && !hasAny) return '';
 
   const pillList = (items) => (items.length ? items.map((s) => `<span class="pill">${escapeHtml(s)}</span>`).join('') : `<span class="muted">Nothing added yet</span>`);
@@ -216,9 +216,11 @@ function aboutMeHtml(pupil, opts) {
   return `
     <div class="card about-me">
       <div class="about-me-view">
+        ${pupil.bio ? `<div class="about-me-row"><h4>About me</h4><p class="about-me-bio">${escapeHtml(pupil.bio)}</p></div>` : ''}
         <div class="about-me-row"><h4>Things I like</h4><div class="pill-list">${pillList(pupil.likes)}</div></div>
         <div class="about-me-row"><h4>Things I don't like</h4><div class="pill-list">${pillList(pupil.dislikes)}</div></div>
         <div class="about-me-row"><h4>Favourite subjects</h4><div class="pill-list">${pillList(pupil.favourite_subjects)}</div></div>
+        ${pupil.fun_fact ? `<div class="about-me-row"><h4>Little known fact</h4><p class="about-me-bio">${escapeHtml(pupil.fun_fact)}</p></div>` : ''}
         ${opts.canEditAbout ? `<button id="about-me-edit-btn" class="btn">Edit</button>` : ''}
       </div>
       ${opts.canEditAbout ? aboutMeFormHtml(pupil) : ''}
@@ -228,6 +230,10 @@ function aboutMeHtml(pupil, opts) {
 function aboutMeFormHtml(pupil) {
   return `
     <form id="about-me-form" class="tracker-form hidden">
+      <div class="field">
+        <label for="about-bio">About me</label>
+        <textarea id="about-bio" rows="3" placeholder="A few sentences about you">${escapeHtml(pupil.bio || '')}</textarea>
+      </div>
       <div class="field">
         <label for="about-likes">Things I like (up to 5, comma-separated)</label>
         <input id="about-likes" type="text" value="${escapeHtml(pupil.likes.join(', '))}" />
@@ -239,6 +245,10 @@ function aboutMeFormHtml(pupil) {
       <div class="field">
         <label for="about-subjects">Favourite subjects (up to 5, comma-separated)</label>
         <input id="about-subjects" type="text" value="${escapeHtml(pupil.favourite_subjects.join(', '))}" />
+      </div>
+      <div class="field">
+        <label for="about-fun-fact">Little known fact</label>
+        <input id="about-fun-fact" type="text" placeholder="e.g. I can solve a Rubik's cube in under a minute" value="${escapeHtml(pupil.fun_fact || '')}" />
       </div>
       <button type="submit" class="btn btn-primary">Save</button>
     </form>`;
@@ -264,6 +274,8 @@ function wireAboutMe(container, pupilId, pupil, opts, rerender) {
         likes: splitList('#about-likes'),
         dislikes: splitList('#about-dislikes'),
         favourite_subjects: splitList('#about-subjects'),
+        bio: form.querySelector('#about-bio').value,
+        fun_fact: form.querySelector('#about-fun-fact').value,
       });
       toast('Saved');
       rerender();

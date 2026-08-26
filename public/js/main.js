@@ -65,21 +65,25 @@ const BOTTOM_NAV_ITEMS = {
     { route: 'individual', label: 'Board' },
     { route: 'weekly', label: 'Weekly' },
     { route: 'messages', label: 'Messages' },
+    { route: 'profile', label: 'Profile' },
   ],
   parent: [
     { route: 'dashboard', label: 'Home' },
     { route: 'individual', label: 'Board' },
     { route: 'messages', label: 'Messages' },
+    { route: 'profile', label: 'Profile' },
   ],
   teacher: [
     { route: 'admin', label: 'Admin' },
     { route: 'individual', label: 'Board' },
     { route: 'messages', label: 'Messages' },
+    { route: 'profile', label: 'Profile' },
   ],
   admin: [
     { route: 'admin', label: 'Admin' },
     { route: 'individual', label: 'Board' },
     { route: 'messages', label: 'Messages' },
+    { route: 'profile', label: 'Profile' },
   ],
 };
 

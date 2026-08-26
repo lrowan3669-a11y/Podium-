@@ -45,6 +45,8 @@ async function pupilSummary(pupilId) {
     likes: pupil.likes || [],
     dislikes: pupil.dislikes || [],
     favourite_subjects: pupil.favourite_subjects || [],
+    bio: pupil.bio || null,
+    fun_fact: pupil.fun_fact || null,
   };
 }
 
@@ -135,16 +137,28 @@ function cleanList(input) {
   return input.map((s) => String(s).trim()).filter(Boolean).slice(0, 5);
 }
 
+function cleanText(input, maxLen) {
+  if (typeof input !== 'string') return null;
+  const trimmed = input.trim();
+  return trimmed ? trimmed.slice(0, maxLen) : null;
+}
+
 router.put('/pupil/:pupilId/about', route(async (req, res) => {
   const pupilId = req.params.pupilId;
   const isSelf = req.profile.role === 'pupil' && String(req.profile.pupil_id) === String(pupilId);
   if (!isSelf && req.profile.role !== 'admin') return res.status(403).json({ error: 'only the pupil themselves (or an admin) can edit this' });
 
-  const { likes, dislikes, favourite_subjects } = req.body || {};
+  const { likes, dislikes, favourite_subjects, bio, fun_fact } = req.body || {};
   must(
     await supabase
       .from('pupils')
-      .update({ likes: cleanList(likes), dislikes: cleanList(dislikes), favourite_subjects: cleanList(favourite_subjects) })
+      .update({
+        likes: cleanList(likes),
+        dislikes: cleanList(dislikes),
+        favourite_subjects: cleanList(favourite_subjects),
+        bio: cleanText(bio, 1000),
+        fun_fact: cleanText(fun_fact, 300),
+      })
       .eq('id', pupilId)
   );
   res.json({ ok: true });

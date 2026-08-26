@@ -14,6 +14,7 @@ const classesRoutes = require('./routes/classes');
 const directoryRoutes = require('./routes/directory');
 const invitesRoutes = require('./routes/invites');
 const messagesRoutes = require('./routes/messages');
+const profileRoutes = require('./routes/profile');
 const { ensureAvatarBucket, ensureSchoolAssetsBucket, ensureClassAssetsBucket, CLASS_ASSETS_BUCKET } = require('./lib/storage');
 const { generateQuestions: generateAiQuestions, isConfigured: isAiConfigured } = require('./lib/aiQuestions');
 
@@ -33,6 +34,7 @@ app.use('/api/classes', classesRoutes);
 app.use('/api/directory', directoryRoutes);
 app.use('/api', invitesRoutes);
 app.use('/api/messages', messagesRoutes);
+app.use('/api/profile', profileRoutes);
 
 // ---------- helpers ----------
 

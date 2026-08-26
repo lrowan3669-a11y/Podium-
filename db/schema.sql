@@ -355,3 +355,22 @@ alter table pupil_invites enable row level security;
 insert into storage.buckets (id, name, public)
 values ('class-assets', 'class-assets', true)
 on conflict (id) do nothing;
+
+
+-- ============================================================================
+-- Phase 5: "about me" for every account, not just pupils — staff and
+-- parents get the same self-authored personality fields on My Profile.
+-- Safe to re-run alongside everything above.
+-- ============================================================================
+
+-- Every account gets these, self-edited from My Profile (#/profile).
+alter table profiles add column if not exists likes jsonb;
+alter table profiles add column if not exists dislikes jsonb;
+alter table profiles add column if not exists bio text;
+alter table profiles add column if not exists fun_fact text;
+alter table profiles add column if not exists favourites jsonb;
+
+-- Pupils already had likes/dislikes/favourite_subjects — bio and fun_fact
+-- bring them in line with what every other account now has.
+alter table pupils add column if not exists bio text;
+alter table pupils add column if not exists fun_fact text;

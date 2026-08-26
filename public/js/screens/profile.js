@@ -20,7 +20,10 @@ export async function renderProfile(container) {
     return renderPupilHub(container, profile.pupil_id, { canUploadAvatar: true, canEditAbout: true, canInviteParent: false });
   }
 
-  const dashboard = await api.getMyDashboard().catch(() => null);
+  const [dashboard, aboutMe] = await Promise.all([
+    api.getMyDashboard().catch(() => null),
+    api.getMyAboutMe().catch(() => ({ likes: [], dislikes: [], favourites: [], bio: null, fun_fact: null })),
+  ]);
 
   container.innerHTML = `
     <h1 class="screen-title">My Profile</h1>
@@ -38,6 +41,7 @@ export async function renderProfile(container) {
       </div>
     </div>
     ${roleDetailHtml(profile, dashboard)}
+    ${aboutMeHtml(aboutMe)}
   `;
 
   wireAvatarFallbacks(container);
@@ -49,6 +53,76 @@ export async function renderProfile(container) {
       await api.uploadMyAvatar(file);
       toast('Photo updated');
       renderProfile(container);
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+
+  wireAboutMe(container, () => renderProfile(container));
+}
+
+function aboutMeHtml(aboutMe) {
+  const pillList = (items) => (items.length ? items.map((s) => `<span class="pill">${escapeHtml(s)}</span>`).join('') : `<span class="muted">Nothing added yet</span>`);
+  return `
+    <div class="card about-me">
+      <div class="about-me-view">
+        ${aboutMe.bio ? `<div class="about-me-row"><h4>About me</h4><p class="about-me-bio">${escapeHtml(aboutMe.bio)}</p></div>` : ''}
+        <div class="about-me-row"><h4>Things I like</h4><div class="pill-list">${pillList(aboutMe.likes)}</div></div>
+        <div class="about-me-row"><h4>Things I don't like</h4><div class="pill-list">${pillList(aboutMe.dislikes)}</div></div>
+        <div class="about-me-row"><h4>Favourites</h4><div class="pill-list">${pillList(aboutMe.favourites)}</div></div>
+        ${aboutMe.fun_fact ? `<div class="about-me-row"><h4>Little known fact</h4><p class="about-me-bio">${escapeHtml(aboutMe.fun_fact)}</p></div>` : ''}
+        <button id="about-me-edit-btn" class="btn">Edit</button>
+      </div>
+      <form id="about-me-form" class="tracker-form hidden">
+        <div class="field">
+          <label for="about-bio">About me</label>
+          <textarea id="about-bio" rows="3" placeholder="A few sentences about you">${escapeHtml(aboutMe.bio || '')}</textarea>
+        </div>
+        <div class="field">
+          <label for="about-likes">Things I like (up to 5, comma-separated)</label>
+          <input id="about-likes" type="text" value="${escapeHtml(aboutMe.likes.join(', '))}" />
+        </div>
+        <div class="field">
+          <label for="about-dislikes">Things I don't like (up to 5, comma-separated)</label>
+          <input id="about-dislikes" type="text" value="${escapeHtml(aboutMe.dislikes.join(', '))}" />
+        </div>
+        <div class="field">
+          <label for="about-favourites">Favourites (up to 5, comma-separated — sport, hobby, whatever)</label>
+          <input id="about-favourites" type="text" placeholder="e.g. Football, Baking, The Beatles" value="${escapeHtml(aboutMe.favourites.join(', '))}" />
+        </div>
+        <div class="field">
+          <label for="about-fun-fact">Little known fact</label>
+          <input id="about-fun-fact" type="text" placeholder="e.g. I once met the Prime Minister" value="${escapeHtml(aboutMe.fun_fact || '')}" />
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </form>
+    </div>`;
+}
+
+function wireAboutMe(container, rerender) {
+  const editBtn = container.querySelector('#about-me-edit-btn');
+  const form = container.querySelector('#about-me-form');
+  const view = container.querySelector('.about-me-view');
+  if (!editBtn || !form) return;
+
+  editBtn.addEventListener('click', () => {
+    view.classList.add('hidden');
+    form.classList.remove('hidden');
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const splitList = (id) => form.querySelector(id).value.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 5);
+    try {
+      await api.updateMyAboutMe({
+        likes: splitList('#about-likes'),
+        dislikes: splitList('#about-dislikes'),
+        favourites: splitList('#about-favourites'),
+        bio: form.querySelector('#about-bio').value,
+        fun_fact: form.querySelector('#about-fun-fact').value,
+      });
+      toast('Saved');
+      rerender();
     } catch (err) {
       toast(err.message);
     }

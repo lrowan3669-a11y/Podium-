@@ -49,6 +49,10 @@ export const api = {
   getPupilDashboard: (pupilId) => request(`/dashboard/pupil/${pupilId}`),
   updateAboutMe: (pupilId, data) => request(`/dashboard/pupil/${pupilId}/about`, { method: 'PUT', body: JSON.stringify(data) }),
 
+  // ---- my profile (every role's own "about me") ----
+  getMyAboutMe: () => request('/profile/me'),
+  updateMyAboutMe: (data) => request('/profile/me', { method: 'PUT', body: JSON.stringify(data) }),
+
   // ---- trackers ----
   getAcademicProgress: (pupilId) => request(`/trackers/academic/${pupilId}`),
   recordAcademicProgress: (pupilId, data) => request(`/trackers/academic/${pupilId}`, { method: 'POST', body: JSON.stringify(data) }),
