@@ -12,7 +12,7 @@ export async function renderDirectory(container) {
         ? `<div class="empty-state">No classes exist yet — create one in Teacher Admin before claiming pupils.</div>`
         : !pupils.length
           ? `<div class="empty-state">Nobody's waiting to be claimed right now.</div>`
-          : `<div class="card"><table>
+          : `<div class="card"><div class="table-scroll"><table>
               <thead><tr><th>Name</th><th>Claim into</th><th></th></tr></thead>
               <tbody>
                 ${pupils
@@ -30,7 +30,7 @@ export async function renderDirectory(container) {
                   )
                   .join('')}
               </tbody>
-            </table></div>`
+            </table></div></div>`
     }
   `;
 

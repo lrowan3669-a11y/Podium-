@@ -386,7 +386,7 @@ export async function renderAttendanceDetail(container, pupilId, opts = {}) {
       <h3>Attendance</h3>
       ${
         entries.length
-          ? `<table>
+          ? `<div class="table-scroll"><table>
               <thead><tr><th>Date</th><th>AM</th><th>PM</th></tr></thead>
               <tbody>
                 ${groupAttendanceByDate(entries)
@@ -399,7 +399,7 @@ export async function renderAttendanceDetail(container, pupilId, opts = {}) {
                   )
                   .join('')}
               </tbody>
-            </table>`
+            </table></div>`
           : `<p class="muted">No entries yet</p>`
       }
       ${opts.canRecordTrackers ? attendanceFormHtml() : ''}

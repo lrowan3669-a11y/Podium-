@@ -54,26 +54,28 @@ async function renderPupilsTab(body) {
       </div>
       <div class="card">
         <h3>Roster (${pupils.length})</h3>
-        <table>
-          <thead><tr><th>Name</th><th>Class</th><th>Season</th><th></th></tr></thead>
-          <tbody>
-            ${pupils
-              .map(
-                (p) => `
-              <tr>
-                <td>${escapeHtml(p.name)}</td>
-                <td>
-                  <select data-pupil-class="${p.id}">
-                    ${classes.map((c) => `<option value="${c.id}" ${c.id === p.class_id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
-                  </select>
-                </td>
-                <td>${p.season_points}</td>
-                <td><button class="btn" data-delete-pupil="${p.id}">Remove</button></td>
-              </tr>`
-              )
-              .join('')}
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Name</th><th>Class</th><th>Season</th><th></th></tr></thead>
+            <tbody>
+              ${pupils
+                .map(
+                  (p) => `
+                <tr>
+                  <td>${escapeHtml(p.name)}</td>
+                  <td>
+                    <select data-pupil-class="${p.id}">
+                      ${classes.map((c) => `<option value="${c.id}" ${c.id === p.class_id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+                    </select>
+                  </td>
+                  <td>${p.season_points}</td>
+                  <td><button class="btn" data-delete-pupil="${p.id}">Remove</button></td>
+                </tr>`
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;
@@ -115,22 +117,24 @@ async function renderQuestionsTab(body) {
     </div>
     <div class="card">
       <h3>Existing sets (${sets.length})</h3>
-      <table>
-        <thead><tr><th>Term</th><th>Subject</th><th>Questions</th><th></th></tr></thead>
-        <tbody>
-          ${sets
-            .map(
-              (qs) => `
-            <tr>
-              <td>${escapeHtml(qs.term)}</td>
-              <td>${escapeHtml(qs.subject)}</td>
-              <td>${qs.question_count}</td>
-              <td><button class="btn" data-delete-set="${qs.id}">Delete</button></td>
-            </tr>`
-            )
-            .join('') || `<tr><td colspan="4" class="muted">No question sets yet.</td></tr>`}
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Term</th><th>Subject</th><th>Questions</th><th></th></tr></thead>
+          <tbody>
+            ${sets
+              .map(
+                (qs) => `
+              <tr>
+                <td>${escapeHtml(qs.term)}</td>
+                <td>${escapeHtml(qs.subject)}</td>
+                <td>${qs.question_count}</td>
+                <td><button class="btn" data-delete-set="${qs.id}">Delete</button></td>
+              </tr>`
+              )
+              .join('') || `<tr><td colspan="4" class="muted">No question sets yet.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 
@@ -256,25 +260,27 @@ async function renderClassesTab(body) {
       </div>
       <div class="card">
         <h3>Classes (${classes.length})</h3>
-        <table>
-          <thead><tr><th>Class</th><th>Colour</th></tr></thead>
-          <tbody>
-            ${classes
-              .map(
-                (c) => `
-              <tr>
-                <td>
-                  <span class="class-badge" style="--row-colour:${c.colourHex}">
-                    ${c.photoUrl ? `<img src="${c.photoUrl}" alt="" class="class-thumb" />` : '<span class="class-dot"></span>'}
-                    ${escapeHtml(c.name)}
-                  </span>
-                </td>
-                <td>${c.colourHex}</td>
-              </tr>`
-              )
-              .join('') || `<tr><td colspan="2" class="muted">No classes yet — create the first one.</td></tr>`}
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Class</th><th>Colour</th></tr></thead>
+            <tbody>
+              ${classes
+                .map(
+                  (c) => `
+                <tr>
+                  <td>
+                    <span class="class-badge" style="--row-colour:${c.colourHex}">
+                      ${c.photoUrl ? `<img src="${c.photoUrl}" alt="" class="class-thumb" />` : '<span class="class-dot"></span>'}
+                      ${escapeHtml(c.name)}
+                    </span>
+                  </td>
+                  <td>${c.colourHex}</td>
+                </tr>`
+                )
+                .join('') || `<tr><td colspan="2" class="muted">No classes yet — create the first one.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;

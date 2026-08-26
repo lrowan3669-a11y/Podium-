@@ -652,11 +652,23 @@ button {
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+/* Grid tracks default to a min size of "auto" (their content's min-content
+   width), not 0 — so a wide child (a table, a long select) can force the
+   whole column past the viewport even though it's nominally "1fr". This is
+   what was clipping content on the right on phones, invisibly, since the
+   page also has overflow-x:hidden. */
+.grid-2 > * { min-width: 0; }
+
+/* Tables don't shrink below their content's natural width — scope the
+   overflow to the table itself so it scrolls in place on a narrow screen
+   instead of forcing its container (and the page) wider. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 /* ---------- messages ---------- */
 
 .messages-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.2rem; height: 65vh; min-height: 420px; }
 @media (max-width: 860px) { .messages-layout { grid-template-columns: 1fr; height: auto; } }
+.messages-layout > * { min-width: 0; }
 
 .message-contact-list { padding: 0.6rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; }
 .message-contact {
