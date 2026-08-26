@@ -1,4 +1,13 @@
-import { renderPupilHub, renderAcademicDetail, renderPsdDetail, renderComingSoonDetail, isKnownTile } from '../pupilDetailView.js';
+import {
+  renderPupilHub,
+  renderAcademicDetail,
+  renderPsdDetail,
+  renderAttendanceDetail,
+  renderQualificationsDetail,
+  renderFeedbackDetail,
+  renderComingSoonDetail,
+  isKnownTile,
+} from '../pupilDetailView.js';
 import { currentProfile } from '../session.js';
 
 export async function renderPupilPage(container, params) {
@@ -19,6 +28,9 @@ export async function renderPupilPage(container, params) {
   if (!section) return renderPupilHub(container, pupilId, opts);
   if (section === 'academic') return renderAcademicDetail(container, pupilId, opts);
   if (section === 'psd') return renderPsdDetail(container, pupilId, opts);
+  if (section === 'attendance') return renderAttendanceDetail(container, pupilId, opts);
+  if (section === 'qualifications') return renderQualificationsDetail(container, pupilId, opts);
+  if (section === 'feedback') return renderFeedbackDetail(container, pupilId, opts);
   if (isKnownTile(section)) return renderComingSoonDetail(container, pupilId, section, opts);
 
   container.innerHTML = `<div class="empty-state">Unknown section.</div>`;

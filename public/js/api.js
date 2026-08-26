@@ -53,6 +53,13 @@ export const api = {
   recordAcademicProgress: (pupilId, data) => request(`/trackers/academic/${pupilId}`, { method: 'POST', body: JSON.stringify(data) }),
   getPsd: (pupilId) => request(`/trackers/psd/${pupilId}`),
   recordPsd: (pupilId, data) => request(`/trackers/psd/${pupilId}`, { method: 'POST', body: JSON.stringify(data) }),
+  getAttendance: (pupilId) => request(`/trackers/attendance/${pupilId}`),
+  recordAttendance: (pupilId, data) => request(`/trackers/attendance/${pupilId}`, { method: 'POST', body: JSON.stringify(data) }),
+  getQualifications: (pupilId) => request(`/trackers/qualifications/${pupilId}`),
+  addQualification: (pupilId, data) => request(`/trackers/qualifications/${pupilId}`, { method: 'POST', body: JSON.stringify(data) }),
+  updateQualification: (pupilId, qualId, data) => request(`/trackers/qualifications/${pupilId}/${qualId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  getFeedback: (pupilId) => request(`/trackers/feedback/${pupilId}`),
+  addFeedback: (pupilId, data) => request(`/trackers/feedback/${pupilId}`, { method: 'POST', body: JSON.stringify(data) }),
 
   // ---- admin ----
   getPendingApprovals: () => request('/admin/pending'),

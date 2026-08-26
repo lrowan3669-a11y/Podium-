@@ -23,9 +23,11 @@ const PSD_LABELS = {
 const TILES = [
   { key: 'academic', title: 'Academic Progress', built: true },
   { key: 'psd', title: 'PSD Tracker', built: true },
+  { key: 'attendance', title: 'Attendance Tracker', built: true },
+  { key: 'qualifications', title: 'Qualifications', built: true },
+  { key: 'feedback', title: 'Feedback', built: true },
   { key: 'sporting', title: 'Sporting', note: 'Sport-specific achievements and progress.' },
   { key: 'enterprise', title: 'Business & Enterprise', note: 'Enterprise projects and business skills.' },
-  { key: 'attendance', title: 'Attendance Tracker', note: 'Day-by-day attendance record.' },
   { key: 'strengths', title: 'Strengths Profile', note: 'Based on Clifton Strengths.' },
   { key: 'enhancements', title: 'Educational Enhancements', note: 'DofE, outdoor learning, enrichment activities, guest speakers, work experience, community projects, creative & performing arts.' },
 ];
@@ -150,7 +152,7 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
     api.getIndividualStandings().catch(() => []),
     api.getClassStandings().catch(() => []),
   ]);
-  const { pupil, academicProgress, psd } = detail;
+  const { pupil, academicProgress, psd, attendanceCount, qualificationsCount, feedbackCount } = detail;
 
   const myRank = individualStandings.find((r) => String(r.id) === String(pupil.id));
   const myClassRank = classStandings.find((r) => String(r.id) === String(pupil.class_id));
@@ -177,14 +179,19 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
       ${podiumStatHtml(`${pupil.class_name} Rank`, myClassRank ? `#${myClassRank.rank}` : '—')}
     </div>`;
 
-  const academicCount = academicProgress.length;
-  const psdCount = psd.length;
+  const counts = {
+    academicCount: academicProgress.length,
+    psdCount: psd.length,
+    attendanceCount,
+    qualificationsCount,
+    feedbackCount,
+  };
 
   container.innerHTML = `
     ${pupilHeaderHtml(pupil, opts, extra)}
     <h3 class="coming-soon-title">Podium Trackers</h3>
     <div class="tile-grid">
-      ${TILES.map((t) => tileHtml(pupilId, t, { academicCount, psdCount })).join('')}
+      ${TILES.map((t) => tileHtml(pupilId, t, counts)).join('')}
     </div>
   `;
 
@@ -192,12 +199,20 @@ export async function renderPupilHub(container, pupilId, opts = {}) {
   wireInviteButton(container, pupilId, opts);
 }
 
+const TILE_COUNT_KEYS = {
+  academic: 'academicCount',
+  psd: 'psdCount',
+  attendance: 'attendanceCount',
+  qualifications: 'qualificationsCount',
+  feedback: 'feedbackCount',
+};
+
 function tileHtml(pupilId, tile, counts) {
   let preview = `<span class="pill">Coming soon</span>`;
-  if (tile.key === 'academic') {
-    preview = counts.academicCount ? `<span class="tile-count">${counts.academicCount} entries</span>` : `<span class="muted">No entries yet</span>`;
-  } else if (tile.key === 'psd') {
-    preview = counts.psdCount ? `<span class="tile-count">${counts.psdCount} entries</span>` : `<span class="muted">No entries yet</span>`;
+  const countKey = TILE_COUNT_KEYS[tile.key];
+  if (countKey) {
+    const n = counts[countKey];
+    preview = n ? `<span class="tile-count">${n} ${tile.key === 'feedback' ? (n === 1 ? 'note' : 'notes') : 'entries'}</span>` : `<span class="muted">No entries yet</span>`;
   }
   return `
     <a class="card tile-card ${tile.built ? 'tile-built' : 'tile-soon'}" href="#/pupil/${pupilId}/${tile.key}">
@@ -275,6 +290,258 @@ export async function renderPsdDetail(container, pupilId, opts = {}) {
 
   wireHeaderAvatar(container, pupilId, opts, () => renderPsdDetail(container, pupilId, opts));
   if (opts.canRecordTrackers) wirePsdForm(container, pupilId, opts);
+}
+
+// ---------- attendance detail ----------
+
+const ATTENDANCE_STATUS_LABELS = {
+  present: 'Present',
+  late: 'Late',
+  authorised_absent: 'Authorised absence',
+  unauthorised_absent: 'Unauthorised absence',
+};
+
+export async function renderAttendanceDetail(container, pupilId, opts = {}) {
+  const [detail, entries] = await Promise.all([api.getPupilDashboard(pupilId), api.getAttendance(pupilId)]);
+  const { pupil } = detail;
+
+  container.innerHTML = `
+    ${pupilHeaderHtml(pupil, opts)}
+    <a href="#/pupil/${pupilId}" class="back-link">&larr; Back to dashboard</a>
+    <div class="card">
+      <h3>Attendance</h3>
+      ${
+        entries.length
+          ? `<table>
+              <thead><tr><th>Date</th><th>AM</th><th>PM</th></tr></thead>
+              <tbody>
+                ${groupAttendanceByDate(entries)
+                  .map(
+                    (row) => `<tr>
+                      <td>${escapeHtml(row.date)}</td>
+                      <td>${row.am ? escapeHtml(ATTENDANCE_STATUS_LABELS[row.am]) : '<span class="muted">—</span>'}</td>
+                      <td>${row.pm ? escapeHtml(ATTENDANCE_STATUS_LABELS[row.pm]) : '<span class="muted">—</span>'}</td>
+                    </tr>`
+                  )
+                  .join('')}
+              </tbody>
+            </table>`
+          : `<p class="muted">No entries yet</p>`
+      }
+      ${opts.canRecordTrackers ? attendanceFormHtml() : ''}
+    </div>
+  `;
+
+  wireHeaderAvatar(container, pupilId, opts, () => renderAttendanceDetail(container, pupilId, opts));
+  if (opts.canRecordTrackers) wireAttendanceForm(container, pupilId, opts);
+}
+
+function groupAttendanceByDate(entries) {
+  const byDate = {};
+  for (const e of entries) {
+    byDate[e.entry_date] = byDate[e.entry_date] || { date: e.entry_date };
+    byDate[e.entry_date][e.session] = e.status;
+  }
+  return Object.values(byDate).sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+function attendanceFormHtml() {
+  const today = new Date().toISOString().slice(0, 10);
+  const statusOptions = Object.entries(ATTENDANCE_STATUS_LABELS)
+    .map(([v, l]) => `<option value="${v}">${escapeHtml(l)}</option>`)
+    .join('');
+  return `
+    <form id="attendance-form" class="tracker-form">
+      <div class="row-flex">
+        <div class="field">
+          <label for="att-date">Date</label>
+          <input id="att-date" type="date" value="${today}" />
+        </div>
+        <div class="field">
+          <label for="att-am">Morning</label>
+          <select id="att-am"><option value="">— not recorded —</option>${statusOptions}</select>
+        </div>
+        <div class="field">
+          <label for="att-pm">Afternoon</label>
+          <select id="att-pm"><option value="">— not recorded —</option>${statusOptions}</select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Attendance</button>
+    </form>
+  `;
+}
+
+function wireAttendanceForm(container, pupilId, opts) {
+  const form = container.querySelector('#attendance-form');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const entry_date = form.querySelector('#att-date').value;
+    const am = form.querySelector('#att-am').value;
+    const pm = form.querySelector('#att-pm').value;
+    if (!entry_date || (!am && !pm)) return toast('Pick a date and at least one session');
+    try {
+      if (am) await api.recordAttendance(pupilId, { entry_date, session: 'am', status: am });
+      if (pm) await api.recordAttendance(pupilId, { entry_date, session: 'pm', status: pm });
+      toast('Attendance saved');
+      renderAttendanceDetail(container, pupilId, opts);
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+}
+
+// ---------- qualifications detail ----------
+
+export async function renderQualificationsDetail(container, pupilId, opts = {}) {
+  const [detail, quals] = await Promise.all([api.getPupilDashboard(pupilId), api.getQualifications(pupilId)]);
+  const { pupil } = detail;
+
+  container.innerHTML = `
+    ${pupilHeaderHtml(pupil, opts)}
+    <a href="#/pupil/${pupilId}" class="back-link">&larr; Back to dashboard</a>
+    <div class="card">
+      <h3>Qualifications</h3>
+      ${
+        quals.length
+          ? quals
+              .map(
+                (q) => `
+            <div class="qual-row">
+              <div class="qual-row-head">
+                <span class="tracker-skill-label">${escapeHtml(q.title)}</span>
+                <span class="podium-stat-value" style="font-size:1rem">${q.percent}%</span>
+              </div>
+              <div class="qual-bar"><div class="qual-bar-fill" style="width:${q.percent}%"></div></div>
+              ${
+                opts.canRecordTrackers
+                  ? `<form class="qual-update-form" data-qual-id="${q.id}">
+                      <input type="number" min="0" max="100" value="${q.percent}" />
+                      <button type="submit" class="btn">Update</button>
+                    </form>`
+                  : ''
+              }
+            </div>`
+              )
+              .join('')
+          : `<p class="muted">No entries yet</p>`
+      }
+      ${opts.canRecordTrackers ? qualificationFormHtml() : ''}
+    </div>
+  `;
+
+  wireHeaderAvatar(container, pupilId, opts, () => renderQualificationsDetail(container, pupilId, opts));
+  if (opts.canRecordTrackers) wireQualificationForms(container, pupilId, opts);
+}
+
+function qualificationFormHtml() {
+  return `
+    <form id="qualification-form" class="tracker-form">
+      <div class="row-flex">
+        <div class="field">
+          <label for="qual-title">Qualification</label>
+          <input id="qual-title" type="text" placeholder="e.g. Functional Skills Maths L1" />
+        </div>
+        <div class="field">
+          <label for="qual-percent">Percent complete</label>
+          <input id="qual-percent" type="number" min="0" max="100" value="0" />
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Qualification</button>
+    </form>
+  `;
+}
+
+function wireQualificationForms(container, pupilId, opts) {
+  const addForm = container.querySelector('#qualification-form');
+  if (addForm) {
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = addForm.querySelector('#qual-title').value.trim();
+      const percent = Number(addForm.querySelector('#qual-percent').value);
+      if (!title) return toast('Enter a qualification name');
+      try {
+        await api.addQualification(pupilId, { title, percent });
+        toast('Qualification added');
+        renderQualificationsDetail(container, pupilId, opts);
+      } catch (err) {
+        toast(err.message);
+      }
+    });
+  }
+  container.querySelectorAll('.qual-update-form').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const percent = Number(form.querySelector('input').value);
+      try {
+        await api.updateQualification(pupilId, form.dataset.qualId, { percent });
+        toast('Updated');
+        renderQualificationsDetail(container, pupilId, opts);
+      } catch (err) {
+        toast(err.message);
+      }
+    });
+  });
+}
+
+// ---------- feedback detail ----------
+
+export async function renderFeedbackDetail(container, pupilId, opts = {}) {
+  const [detail, entries] = await Promise.all([api.getPupilDashboard(pupilId), api.getFeedback(pupilId)]);
+  const { pupil } = detail;
+
+  container.innerHTML = `
+    ${pupilHeaderHtml(pupil, opts)}
+    <a href="#/pupil/${pupilId}" class="back-link">&larr; Back to dashboard</a>
+    ${opts.canRecordTrackers ? `<div class="card">${feedbackFormHtml()}</div>` : ''}
+    <div class="feedback-list">
+      ${
+        entries.length
+          ? entries
+              .map(
+                (f) => `
+            <div class="paper-card feedback-note">
+              <p class="feedback-note-body">${escapeHtml(f.body)}</p>
+              <div class="feedback-note-meta">— ${escapeHtml(f.author_name)}, ${new Date(f.created_at).toLocaleDateString()}</div>
+            </div>`
+              )
+              .join('')
+          : `<p class="muted">No feedback yet</p>`
+      }
+    </div>
+  `;
+
+  wireHeaderAvatar(container, pupilId, opts, () => renderFeedbackDetail(container, pupilId, opts));
+  if (opts.canRecordTrackers) wireFeedbackForm(container, pupilId, opts);
+}
+
+function feedbackFormHtml() {
+  return `
+    <form id="feedback-form" class="tracker-form">
+      <div class="field">
+        <label for="fb-body">Leave feedback for this pupil</label>
+        <textarea id="fb-body" rows="3" placeholder="e.g. Great improvement in your Maths work this week — keep it up."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Post Feedback</button>
+    </form>
+  `;
+}
+
+function wireFeedbackForm(container, pupilId, opts) {
+  const form = container.querySelector('#feedback-form');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = form.querySelector('#fb-body').value.trim();
+    if (!body) return toast('Write something first');
+    try {
+      await api.addFeedback(pupilId, { body });
+      toast('Feedback posted');
+      renderFeedbackDetail(container, pupilId, opts);
+    } catch (err) {
+      toast(err.message);
+    }
+  });
 }
 
 // ---------- coming-soon detail ----------

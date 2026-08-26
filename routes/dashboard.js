@@ -101,8 +101,20 @@ router.get('/pupil/:pupilId', route(async (req, res) => {
 
   const academic = must(await supabase.from('academic_progress').select('*').eq('pupil_id', pupilId).order('recorded_at', { ascending: false }));
   const psd = must(await supabase.from('psd_entries').select('*').eq('pupil_id', pupilId).order('recorded_at', { ascending: false }));
+  const [attendanceCount, qualificationsCount, feedbackCount] = await Promise.all([
+    supabase.from('attendance_entries').select('id').eq('pupil_id', pupilId).then((r) => must(r).length),
+    supabase.from('qualifications').select('id').eq('pupil_id', pupilId).then((r) => must(r).length),
+    supabase.from('feedback_entries').select('id').eq('pupil_id', pupilId).then((r) => must(r).length),
+  ]);
 
-  res.json({ pupil: summary, academicProgress: academic, psd });
+  res.json({
+    pupil: summary,
+    academicProgress: academic,
+    psd,
+    attendanceCount,
+    qualificationsCount,
+    feedbackCount,
+  });
 }));
 
 module.exports = router;
