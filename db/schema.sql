@@ -68,14 +68,10 @@ create index if not exists idx_awards_pupil on awards(pupil_id);
 create index if not exists idx_attempts_week on attempts(week);
 create index if not exists idx_pupils_class on pupils(class_id);
 
--- seed the five classes
-insert into classes (id, name, namesake, sport_theme, unit_label, colour_hex, award_flourish) values
-  ('fury', 'Fury', 'Tyson Fury', 'Boxing (heavyweight)', 'a 3rd-round knockdown', '#E24B4A', 'Knockdown! +{points} for Fury'),
-  ('hamilton', 'Hamilton', 'Lewis Hamilton', 'Formula 1', 'a 4-second pit stop', '#1BAF7A', 'Box box! 4-second stop — +{points} for Hamilton'),
-  ('charlton', 'Charlton', 'Bobby Charlton', 'Football', 'a back-post header', '#378ADD', 'Back-post header! +{points} for Charlton'),
-  ('sweet_science', 'Sweet Science', 'Boxing', 'Boxing', 'a 3-punch combo', '#EDA100', 'Three-punch combo! +{points} for Sweet Science'),
-  ('the_power', 'The Power', 'Phil ''The Power'' Taylor', 'Darts', 'a double 20', '#4A3AA7', 'One hundred and eighty… double 20! +{points} for The Power')
-on conflict (id) do nothing;
+-- No demo classes are seeded — classes are created entirely in-app (Teacher
+-- Admin → Classes → "Create a Class"), by whichever school actually
+-- deploys this. See the Phase 4 section below for the columns that made
+-- that possible (photo_path, created_by, nullable sport-identity columns).
 
 insert into meta (key, value) values ('current_week', '1')
 on conflict (key) do nothing;

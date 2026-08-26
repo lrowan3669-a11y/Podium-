@@ -262,7 +262,7 @@ async function renderClassesTab(body) {
         <h3>Classes (${classes.length})</h3>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Class</th><th>Colour</th></tr></thead>
+            <thead><tr><th>Class</th><th>Colour</th><th></th></tr></thead>
             <tbody>
               ${classes
                 .map(
@@ -275,9 +275,10 @@ async function renderClassesTab(body) {
                     </span>
                   </td>
                   <td>${c.colourHex}</td>
+                  <td><button class="btn" data-delete-class="${c.id}">Delete</button></td>
                 </tr>`
                 )
-                .join('') || `<tr><td colspan="2" class="muted">No classes yet — create the first one.</td></tr>`}
+                .join('') || `<tr><td colspan="3" class="muted">No classes yet — create the first one.</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -297,5 +298,18 @@ async function renderClassesTab(body) {
     } catch (e) {
       toast(e.message);
     }
+  });
+
+  body.querySelectorAll('[data-delete-class]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this class? Only possible while it has no pupils in it.')) return;
+      try {
+        await api.deleteClass(btn.dataset.deleteClass);
+        toast('Class deleted');
+        renderClassesTab(body);
+      } catch (e) {
+        toast(e.message);
+      }
+    });
   });
 }

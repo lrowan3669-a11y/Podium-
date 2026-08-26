@@ -127,4 +127,25 @@ router.post('/:id/photo', requireApproved, requireRole('teacher', 'admin'), uplo
   res.json({ ok: true, photoUrl: photoUrl(objectPath) });
 }));
 
+// A class can only be deleted once it's empty — moving/removing its pupils
+// first is a deliberate extra step, not a bulk "delete everything" button.
+router.delete('/:id', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
+  const cls = must(await supabase.from('classes').select('id').eq('id', req.params.id).maybeSingle());
+  if (!cls) return res.status(404).json({ error: 'class not found' });
+
+  if (req.profile.role === 'teacher') {
+    const classIds = await accessibleClassIds(req.profile);
+    if (!classIds.includes(req.params.id)) return res.status(403).json({ error: 'not your class' });
+  }
+
+  const pupilCount = must(await supabase.from('pupils').select('id').eq('class_id', req.params.id)).length;
+  if (pupilCount) {
+    return res.status(409).json({ error: `${pupilCount} pupil${pupilCount === 1 ? ' is' : 's are'} still in this class — move or remove them first` });
+  }
+
+  must(await supabase.from('teacher_class_links').delete().eq('class_id', req.params.id));
+  must(await supabase.from('classes').delete().eq('id', req.params.id));
+  res.json({ ok: true });
+}));
+
 module.exports = router;

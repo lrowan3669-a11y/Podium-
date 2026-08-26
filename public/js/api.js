@@ -72,6 +72,7 @@ export const api = {
   getClasses: () => request('/classes'),
   createClass: (data) => request('/classes', { method: 'POST', body: JSON.stringify(data) }),
   uploadClassPhoto: (classId, file) => upload(`/classes/${classId}/photo`, file, 'photo'),
+  deleteClass: (classId) => request(`/classes/${classId}`, { method: 'DELETE' }),
   getPupils: () => request('/pupils'),
   createPupil: (data) => request('/pupils', { method: 'POST', body: JSON.stringify(data) }),
   updatePupil: (id, data) => request(`/pupils/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
