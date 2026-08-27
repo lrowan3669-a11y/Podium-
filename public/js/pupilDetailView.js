@@ -47,12 +47,47 @@ function latestBySkill(entries) {
   return latest;
 }
 
+// Colour-banded so it reads at a glance: red under 50%, amber 50-74%,
+// green 75%+ — matches the fill proportion too (50% attendance = half the
+// ring lit).
+function attendanceRingColour(percent) {
+  if (percent >= 75) return 'var(--status-good)';
+  if (percent >= 50) return 'var(--status-warn)';
+  return 'var(--status-bad)';
+}
+
+function avatarWithAttendanceRingHtml(pupil) {
+  const percent = pupil.attendance_percent;
+  if (percent === null || percent === undefined) {
+    // Nothing recorded yet — plain avatar, no ring to avoid implying 0%.
+    return pupil.profile_id
+      ? avatarHtml(pupil.profile_id, pupil.name, 88)
+      : `<span class="avatar avatar-fallback" style="--avatar-size:88px">${escapeHtml(pupil.name[0] || '?')}</span>`;
+  }
+  const inner = pupil.profile_id
+    ? avatarHtml(pupil.profile_id, pupil.name, 80)
+    : `<span class="avatar avatar-fallback" style="--avatar-size:80px">${escapeHtml(pupil.name[0] || '?')}</span>`;
+  const r = 46;
+  const circumference = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, percent));
+  const offset = circumference * (1 - clamped / 100);
+  return `
+    <div class="avatar-ring" style="--avatar-ring-colour:${attendanceRingColour(clamped)}" title="Attendance: ${clamped}%">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="${r}" class="avatar-ring-track" />
+        <circle cx="50" cy="50" r="${r}" class="avatar-ring-fill" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" />
+      </svg>
+      <div class="avatar-ring-inner">${inner}</div>
+      <span class="avatar-ring-caption">${clamped}%</span>
+    </div>`;
+}
+
 function pupilHeaderHtml(pupil, opts, extra) {
   const rowColour = pupil.colour_hex || '#2a2a33';
   return `
     <div class="pupil-header card" style="--row-colour:${rowColour}">
       <div class="pupil-header-main">
-        ${pupil.profile_id ? avatarHtml(pupil.profile_id, pupil.name, 88) : `<span class="avatar avatar-fallback" style="--avatar-size:88px">${escapeHtml(pupil.name[0] || '?')}</span>`}
+        ${avatarWithAttendanceRingHtml(pupil)}
         <div>
           <h1 class="screen-title" style="margin-bottom:0.3rem">${escapeHtml(pupil.name)}</h1>
           <span class="class-badge" style="--row-colour:${rowColour}">
@@ -479,9 +514,30 @@ function wireAttendanceForm(container, pupilId, opts) {
 
 // ---------- qualifications detail ----------
 
+function qualRowHtml(q, opts) {
+  return `
+    <div class="qual-row">
+      <div class="qual-row-head">
+        <span class="tracker-skill-label">${escapeHtml(q.title)}</span>
+        <span class="podium-stat-value" style="font-size:1rem">${q.percent}%</span>
+      </div>
+      <div class="qual-bar"><div class="qual-bar-fill" style="width:${q.percent}%"></div></div>
+      ${
+        opts.canRecordTrackers
+          ? `<form class="qual-update-form" data-qual-id="${q.id}">
+              <input type="number" min="0" max="100" value="${q.percent}" />
+              <button type="submit" class="btn">Update</button>
+            </form>`
+          : ''
+      }
+    </div>`;
+}
+
 export async function renderQualificationsDetail(container, pupilId, opts = {}) {
   const [detail, quals] = await Promise.all([api.getPupilDashboard(pupilId), api.getQualifications(pupilId)]);
   const { pupil } = detail;
+  const achieved = quals.filter((q) => q.percent >= 100);
+  const inProgress = quals.filter((q) => q.percent < 100);
 
   container.innerHTML = `
     ${pupilHeaderHtml(pupil, opts)}
@@ -490,26 +546,12 @@ export async function renderQualificationsDetail(container, pupilId, opts = {}) 
       <h3>Qualifications</h3>
       ${
         quals.length
-          ? quals
-              .map(
-                (q) => `
-            <div class="qual-row">
-              <div class="qual-row-head">
-                <span class="tracker-skill-label">${escapeHtml(q.title)}</span>
-                <span class="podium-stat-value" style="font-size:1rem">${q.percent}%</span>
-              </div>
-              <div class="qual-bar"><div class="qual-bar-fill" style="width:${q.percent}%"></div></div>
-              ${
-                opts.canRecordTrackers
-                  ? `<form class="qual-update-form" data-qual-id="${q.id}">
-                      <input type="number" min="0" max="100" value="${q.percent}" />
-                      <button type="submit" class="btn">Update</button>
-                    </form>`
-                  : ''
-              }
-            </div>`
-              )
-              .join('')
+          ? `
+        <h4 class="qual-group-heading">In progress</h4>
+        ${inProgress.length ? inProgress.map((q) => qualRowHtml(q, opts)).join('') : `<p class="muted">Nothing in progress right now</p>`}
+        <h4 class="qual-group-heading">Achieved</h4>
+        ${achieved.length ? achieved.map((q) => qualRowHtml(q, opts)).join('') : `<p class="muted">Nothing achieved yet</p>`}
+      `
           : `<p class="muted">No entries yet</p>`
       }
       ${opts.canRecordTrackers ? qualificationFormHtml() : ''}
@@ -531,6 +573,7 @@ function qualificationFormHtml() {
         <div class="field">
           <label for="qual-percent">Percent complete</label>
           <input id="qual-percent" type="number" min="0" max="100" value="0" />
+          <span class="field-hint">Already achieved it? Enter 100.</span>
         </div>
       </div>
       <button type="submit" class="btn btn-primary">Add Qualification</button>

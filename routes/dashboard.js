@@ -28,11 +28,22 @@ function must({ data, error }) {
   return data;
 }
 
+// present/late count as attended; authorised/unauthorised absence don't —
+// null (not 0) when nothing's been recorded yet, so the UI can tell "no
+// data" apart from "0% attendance" and skip the ring rather than show a
+// misleading full-red one.
+function attendancePercent(entries) {
+  if (!entries.length) return null;
+  const attended = entries.filter((e) => e.status === 'present' || e.status === 'late').length;
+  return Math.round((attended / entries.length) * 100);
+}
+
 async function pupilSummary(pupilId) {
   const pupil = must(await supabase.from('pupils').select('*, classes(name, colour_hex, photo_path)').eq('id', pupilId).maybeSingle());
   if (!pupil) return null;
   const awards = must(await supabase.from('awards').select('points').eq('pupil_id', pupilId));
   const linkedProfile = must(await supabase.from('profiles').select('id').eq('pupil_id', pupilId).maybeSingle());
+  const attendanceEntries = must(await supabase.from('attendance_entries').select('status').eq('pupil_id', pupilId));
   return {
     id: pupil.id,
     name: pupil.name,
@@ -47,6 +58,7 @@ async function pupilSummary(pupilId) {
     favourite_subjects: pupil.favourite_subjects || [],
     bio: pupil.bio || null,
     fun_fact: pupil.fun_fact || null,
+    attendance_percent: attendancePercent(attendanceEntries),
   };
 }
 
