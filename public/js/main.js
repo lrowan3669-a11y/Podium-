@@ -59,29 +59,33 @@ const NAV_ITEMS = [
 // Phone-only bottom tab bar — a short, role-scoped subset of NAV_ITEMS for
 // quick thumb access. The full list stays reachable via the topbar's
 // hamburger sheet, which remains present at every width.
+// Labels here deliberately match NAV_ITEMS' wording for the same route —
+// "Board" vs "Standings" and "Hub"/"Home" vs "Dashboard" for the same
+// screen, depending which nav you looked at, was its own source of
+// confusion on top of everything else.
 const BOTTOM_NAV_ITEMS = {
   pupil: [
-    { route: 'dashboard', label: 'Hub' },
-    { route: 'individual', label: 'Board' },
+    { route: 'dashboard', label: 'Dashboard' },
+    { route: 'individual', label: 'Standings' },
     { route: 'weekly', label: 'Weekly' },
     { route: 'messages', label: 'Messages' },
     { route: 'profile', label: 'Profile' },
   ],
   parent: [
-    { route: 'dashboard', label: 'Home' },
-    { route: 'individual', label: 'Board' },
+    { route: 'dashboard', label: 'Dashboard' },
+    { route: 'individual', label: 'Standings' },
     { route: 'messages', label: 'Messages' },
     { route: 'profile', label: 'Profile' },
   ],
   teacher: [
-    { route: 'admin', label: 'Admin' },
-    { route: 'individual', label: 'Board' },
+    { route: 'admin', label: 'Teacher Admin' },
+    { route: 'individual', label: 'Standings' },
     { route: 'messages', label: 'Messages' },
     { route: 'profile', label: 'Profile' },
   ],
   admin: [
-    { route: 'admin', label: 'Admin' },
-    { route: 'individual', label: 'Board' },
+    { route: 'admin', label: 'Teacher Admin' },
+    { route: 'individual', label: 'Standings' },
     { route: 'messages', label: 'Messages' },
     { route: 'profile', label: 'Profile' },
   ],
