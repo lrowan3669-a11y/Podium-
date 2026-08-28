@@ -61,4 +61,33 @@ router.put('/me', route(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Admin-only: view any staff/parent's profile — the same shape My Profile
+// shows for yourself, so admin can click through from a class roster to
+// its teacher without that being a general "look up anyone" feature.
+router.get('/:profileId', route(async (req, res) => {
+  if (req.profile.role !== 'admin') return res.status(403).json({ error: 'forbidden' });
+
+  const p = must(await supabase.from('profiles').select('*').eq('id', req.params.profileId).maybeSingle());
+  if (!p) return res.status(404).json({ error: 'not found' });
+
+  let classes = [];
+  let children = [];
+  if (p.role === 'teacher') {
+    const links = must(await supabase.from('teacher_class_links').select('class_id').eq('teacher_profile_id', p.id));
+    classes = links.length ? must(await supabase.from('classes').select('id, name').in('id', links.map((l) => l.class_id))) : [];
+  } else if (p.role === 'parent') {
+    const links = must(await supabase.from('parent_pupil_links').select('pupil_id').eq('parent_profile_id', p.id));
+    children = links.length ? must(await supabase.from('pupils').select('id, name').in('id', links.map((l) => l.pupil_id))) : [];
+  }
+
+  res.json({
+    id: p.id,
+    full_name: p.full_name,
+    role: p.role,
+    ...aboutMeShape(p),
+    classes,
+    children,
+  });
+}));
+
 module.exports = router;

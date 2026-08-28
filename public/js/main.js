@@ -21,6 +21,8 @@ import { renderDirectory } from './screens/directory.js';
 import { renderInvite } from './screens/invite.js';
 import { renderMessages } from './screens/messages.js';
 import { renderProfile } from './screens/profile.js';
+import { renderClassRoster } from './screens/classRoster.js';
+import { renderStaffProfile } from './screens/staffProfile.js';
 
 showPlaceholderBranding();
 refreshSchoolBranding();
@@ -40,6 +42,8 @@ const APP_ROUTES = {
   directory: renderDirectory,
   messages: renderMessages,
   profile: renderProfile,
+  class: renderClassRoster,
+  staff: renderStaffProfile,
 };
 
 // route key -> { label, roles } — roles omitted means every approved role sees it

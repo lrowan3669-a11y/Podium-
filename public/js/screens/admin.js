@@ -62,7 +62,7 @@ async function renderPupilsTab(body) {
                 .map(
                   (p) => `
                 <tr>
-                  <td>${escapeHtml(p.name)}</td>
+                  <td><a href="#/pupil/${p.id}">${escapeHtml(p.name)}</a></td>
                   <td>
                     <select data-pupil-class="${p.id}">
                       ${classes.map((c) => `<option value="${c.id}" ${c.id === p.class_id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
@@ -361,10 +361,10 @@ async function renderClassesTab(body) {
                   (c) => `
                 <tr>
                   <td>
-                    <span class="class-badge" style="--row-colour:${c.colourHex}">
+                    <a href="#/class/${c.id}" class="class-badge" style="--row-colour:${c.colourHex}">
                       ${c.photoUrl ? `<img src="${c.photoUrl}" alt="" class="class-thumb" />` : '<span class="class-dot"></span>'}
                       ${escapeHtml(c.name)}
-                    </span>
+                    </a>
                   </td>
                   <td>${c.colourHex}</td>
                   <td><button class="btn" data-delete-class="${c.id}">Delete</button></td>

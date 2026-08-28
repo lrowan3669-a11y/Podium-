@@ -52,6 +52,7 @@ export const api = {
   // ---- my profile (every role's own "about me") ----
   getMyAboutMe: () => request('/profile/me'),
   updateMyAboutMe: (data) => request('/profile/me', { method: 'PUT', body: JSON.stringify(data) }),
+  getStaffProfile: (profileId) => request(`/profile/${profileId}`),
 
   // ---- trackers ----
   getAcademicProgress: (pupilId) => request(`/trackers/academic/${pupilId}`),
@@ -77,6 +78,7 @@ export const api = {
   createClass: (data) => request('/classes', { method: 'POST', body: JSON.stringify(data) }),
   uploadClassPhoto: (classId, file) => upload(`/classes/${classId}/photo`, file, 'photo'),
   deleteClass: (classId) => request(`/classes/${classId}`, { method: 'DELETE' }),
+  getClassRoster: (classId) => request(`/classes/${classId}/roster`),
   getPupils: () => request('/pupils'),
   createPupil: (data) => request('/pupils', { method: 'POST', body: JSON.stringify(data) }),
   updatePupil: (id, data) => request(`/pupils/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

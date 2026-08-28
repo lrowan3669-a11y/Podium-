@@ -127,6 +127,36 @@ router.post('/:id/photo', requireApproved, requireRole('teacher', 'admin'), uplo
   res.json({ ok: true, photoUrl: photoUrl(objectPath) });
 }));
 
+// The class's pupils (each linking through to their profile) and the
+// teacher(s) assigned to it — how an admin browses classes -> pupils
+// -> profile, and a teacher department a class -> profile without going
+// through Directory/Pupils.
+router.get('/:id/roster', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
+  const cls = must(await supabase.from('classes').select('*').eq('id', req.params.id).maybeSingle());
+  if (!cls) return res.status(404).json({ error: 'class not found' });
+
+  if (req.profile.role === 'teacher') {
+    const classIds = await accessibleClassIds(req.profile);
+    if (!classIds.includes(req.params.id)) return res.status(403).json({ error: 'not your class' });
+  }
+
+  const links = must(await supabase.from('teacher_class_links').select('teacher_profile_id').eq('class_id', req.params.id));
+  const teacherIds = links.map((l) => l.teacher_profile_id);
+  const teachers = teacherIds.length
+    ? must(await supabase.from('profiles').select('id, full_name, avatar_path').in('id', teacherIds))
+    : [];
+
+  const pupils = must(await supabase.from('pupils').select('id, name').eq('class_id', req.params.id).eq('active', true).order('name'));
+  const awards = pupils.length ? must(await supabase.from('awards').select('pupil_id, points').eq('class_id', req.params.id)) : [];
+  const pupilRows = pupils.map((p) => ({
+    id: p.id,
+    name: p.name,
+    season_points: awards.filter((a) => a.pupil_id === p.id).reduce((sum, a) => sum + a.points, 0),
+  }));
+
+  res.json({ class: classRow(cls), teachers, pupils: pupilRows });
+}));
+
 // A class can only be deleted once it's empty — moving/removing its pupils
 // first is a deliberate extra step, not a bulk "delete everything" button.
 router.delete('/:id', requireApproved, requireRole('teacher', 'admin'), route(async (req, res) => {
